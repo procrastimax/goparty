@@ -64,13 +64,13 @@ func AddMP3ToMusicQueue(filename string) error {
 	streamer, format, err := loadMp3File(filename)
 
 	if err != nil {
-		return fmt.Errorf("add mp3 queue: %v", err)
+		return fmt.Errorf("load mp3: %v", err)
 	}
 
 	// we need to resample the song sample rate to the speaker sample rate
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
-	queue.Add(resampledStreamer)
+	queue.Add(filename, resampledStreamer)
 	speaker.Unlock()
 
 	fmt.Printf("Added song to queue: %s\n", filename)
@@ -86,22 +86,22 @@ func SkipSong() {
 func loadMp3File(filename string) (*beep.StreamSeekCloser, *beep.Format, error) {
 
 	if len(filename) <= 4 {
-		return nil, nil, fmt.Errorf("load MP3: File %s is not a valid mp3 name", filename)
+		return nil, nil, fmt.Errorf("File %s is not a valid mp3 name", filename)
 	}
 
 	//check if really an mp3
 	if filename[len(filename)-4:] != ".mp3" {
-		return nil, nil, fmt.Errorf("load MP3: File %s is not a mp3", filename)
+		return nil, nil, fmt.Errorf("File %s is not a mp3", filename)
 	}
 
 	f, err := os.Open(filename)
 	if err != nil {
-		return nil, nil, fmt.Errorf("load mp3: error when loading %s - %v", filename, err)
+		return nil, nil, err
 	}
 
 	streamer, format, err := mp3.Decode(f)
 	if err != nil {
-		return nil, nil, fmt.Errorf("play mp3: could not decode mp3 %v", err)
+		return nil, nil, err
 	}
 
 	return &streamer, &format, nil
