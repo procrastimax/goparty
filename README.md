@@ -1,4 +1,4 @@
-# goparty - the youtube music queue software
+# yt-queue - the youtube music queue software
 
 
 ## Uses libraries & Binaries
