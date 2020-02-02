@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Youtube Queue</title>
+        <h1>Youtube Queue</h1>
+    </head>
+    <body>
+        <form action="/" method="POST">
+           
+        <div style="margin: 1em;"> 
+            YouTube Link:<br>
+            <input  type="url"
+                    name="ytlink"
+                    maxlength="60"
+                    size="65"
+                    autofocus
+                    placeholder="f.e. https://www.youtube.com/watch?v=hHW1oY26kxQ"
+                    required
+                    pattern="https://.*">
+        </div>
+        <div>
+            <input type="submit" value="Add Song To Queue" style="margin-left: 1em;">
+        </div>
+        </form>
+    </body>
+</html> 
+
