@@ -31,6 +31,16 @@ func CloseSpeaker() {
 	speaker.Close()
 }
 
+//PauseSpeaker pauses the speaker
+func PauseSpeaker() {
+	queue.Pause()
+}
+
+//ResumeSpeaker resumes
+func ResumeSpeaker() {
+	queue.Resume()
+}
+
 //StartSpeaker starts the speaking by using the musicqueue
 func StartSpeaker() {
 	speaker.Play(&queue)
