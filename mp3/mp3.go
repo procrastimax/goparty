@@ -67,6 +67,11 @@ func AddMP3ToMusicQueue(filename string) error {
 	return nil
 }
 
+//SkipSong skips a song in the music queue
+func SkipSong() {
+	queue.Skip()
+}
+
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format
 func loadMp3File(filename string) (*beep.StreamSeekCloser, *beep.Format, error) {
 

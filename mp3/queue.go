@@ -14,6 +14,11 @@ func (q *MusicQueue) Add(streamers ...beep.Streamer) {
 	q.streamers = append(q.streamers, streamers...)
 }
 
+//Skip skips to the next song
+func (q *MusicQueue) Skip() {
+	q.streamers = q.streamers[1:]
+}
+
 //Stream implements the streamer interface
 func (q *MusicQueue) Stream(samples [][2]float64) (n int, ok bool) {
 	// successfully filled already. We loop until all samples are filled.
