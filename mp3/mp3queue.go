@@ -7,6 +7,7 @@ import (
 //The code for this queue comes from the beep tutorial: https://github.com/faiface/beep/wiki/Making-own-streamers
 
 //MusicQueue is a datastruct to add more songs to the streamer
+// we dont need a mutex here, because this queue in only on the server side and handles one sound ouput
 type MusicQueue struct {
 	streamers []beep.Streamer
 	//a list of all song names in the queue (youtube title)
