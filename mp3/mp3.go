@@ -1,4 +1,4 @@
-//Package mp3 handles the playing of mp3 files
+//Package mp3 handles the playing and concatenation of mp3 streams
 package mp3
 
 import (
@@ -29,22 +29,25 @@ func DeleteMusicQueue() {
 func CloseSpeaker() {
 	DeleteMusicQueue()
 	speaker.Close()
+	fmt.Println("Speaker closed")
 }
 
 //PauseSpeaker pauses the speaker
 func PauseSpeaker() {
+	fmt.Println("Speaker paused")
 	queue.Pause()
-}
-
-//ResumeSpeaker resumes
-func ResumeSpeaker() {
-	queue.Resume()
 }
 
 //StartSpeaker starts the speaking by using the musicqueue
 func StartSpeaker() {
-	speaker.Play(&queue)
-	fmt.Println("Speaker started")
+	//if queue is already initialized, then just resume playing
+	if len(queue.streamers) > 0 {
+		fmt.Println("Speaker resumed")
+		queue.Resume()
+	} else {
+		speaker.Play(&queue)
+		fmt.Println("Speaker started")
+	}
 }
 
 //InitSpeaker initializes the speaker with a fixed sample rate
@@ -80,11 +83,11 @@ func AddMP3ToMusicQueue(filename string) error {
 //SkipSong skips a song in the music queue
 func SkipSong() {
 	queue.Skip()
+	fmt.Println("Song skipped")
 }
 
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format
 func loadMp3File(filename string) (*beep.StreamSeekCloser, *beep.Format, error) {
-
 	if len(filename) <= 4 {
 		return nil, nil, fmt.Errorf("File %s is not a valid mp3 name", filename)
 	}

@@ -25,8 +25,10 @@ func (q *MusicQueue) Add(sogname string, streamers ...beep.Streamer) {
 
 //Skip skips to the next song
 func (q *MusicQueue) Skip() {
-	q.streamers = q.streamers[1:]
-	q.currentIDx++
+	if len(q.streamers) > 0 {
+		q.streamers = q.streamers[1:]
+		q.currentIDx++
+	}
 }
 
 //Pause pauses the music
