@@ -17,6 +17,7 @@ package youtube
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -25,7 +26,7 @@ import (
 var (
 	downloadDir  = "songs/"
 	youtubeDlDir = ""
-	isVerbose    = false
+	isVerbose    = true
 	jobCH        = make(chan string)
 )
 
@@ -76,7 +77,7 @@ func (q *DownloadQueue) StartDownloadWorker() {
 	go func() {
 		for job := range jobCH {
 			fmt.Println("hanging here before")
-			downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, q.Done)
+			log.Fatalln(downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, q.Done))
 		}
 	}()
 }
