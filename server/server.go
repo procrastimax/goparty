@@ -29,14 +29,14 @@ func renderTemplate(w http.ResponseWriter, tmpl string) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		if strings.Contains(r.RemoteAddr, "127.0.0.1") {
+		if strings.Contains(r.RemoteAddr, "127.0.0.1") || strings.Contains(r.RemoteAddr, "::1") {
 			renderTemplate(w, "admin")
 		} else {
 			renderTemplate(w, "addsong")
 		}
 
 	} else if r.Method == "POST" {
-		if strings.Contains(r.RemoteAddr, "127.0.0.1") {
+		if strings.Contains(r.RemoteAddr, "127.0.0.1") || strings.Contains(r.RemoteAddr, "::1") {
 			renderTemplate(w, "admin")
 			fmt.Println(r.FormValue("startBtn"))
 		} else {
