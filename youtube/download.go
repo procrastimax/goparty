@@ -26,40 +26,46 @@ import (
 var (
 	downloadDir  = "songs/"
 	youtubeDlDir = ""
-	isVerbose    = true
-	jobCH        = make(chan string)
+	isVerbose    = false
+	jobCh        = make(chan string, 2)
+	quitCh       = make(chan bool)
+	queue        downloadQueue
 )
 
-//DownloadQueue handles information about upcoming songs to download
-type DownloadQueue struct {
+//downloadQueue handles information about upcoming songs to download
+type downloadQueue struct {
 	urls []string
 	sync.Mutex
 }
 
 //Add adds an url to the worker list of urls
-func (q *DownloadQueue) Add(url string) {
-	q.Lock()
-	q.urls = append(q.urls, url)
+func Add(url string) {
+	queue.Lock()
+	queue.urls = append(queue.urls, url)
 
-	if len(q.urls) == 1 {
-		jobCH <- url
+	if len(queue.urls) == 1 {
+		jobCh <- url
 		fmt.Println("Added first element")
 	}
-	fmt.Println("download queue length:", len(q.urls))
-	q.Unlock()
+	fmt.Println("download queue length:", len(queue.urls))
+	queue.Unlock()
 }
 
-//Done removes the first element of the queue when done
-func (q *DownloadQueue) Done() {
-	q.Lock()
+//ExitDownloadWorker quits the donloading worker loop by sending a value on the quit channel
+func ExitDownloadWorker() {
+	quitCh <- true
+}
+
+//done removes the first element of the queue when done
+func done() {
 	fmt.Println("done")
-	q.urls = q.urls[1:]
-	if len(q.urls) != 0 {
-		nextURL := q.urls[0]
-		jobCH <- nextURL
+	queue.Lock()
+	queue.urls = queue.urls[1:]
+	if len(queue.urls) != 0 {
+		nextURL := queue.urls[0]
+		jobCh <- nextURL
 	}
-	fmt.Println("download queue length:", len(q.urls))
-	q.Unlock()
+	queue.Unlock()
 }
 
 //MustExistYoutubeDL is a helper function, which panics when no youtube-dl exist
@@ -72,12 +78,23 @@ func MustExistYoutubeDL() {
 }
 
 //StartDownloadWorker starts downlading
-func (q *DownloadQueue) StartDownloadWorker() {
-	//wg := sync.WaitGroup{}
+func StartDownloadWorker() {
+	fmt.Println("Started YT-Download Worker!")
+	var err error
 	go func() {
-		for job := range jobCH {
-			fmt.Println("hanging here before")
-			log.Fatalln(downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, q.Done))
+		for {
+			select {
+			case <-quitCh:
+				fmt.Println("Stopping Download Worker")
+				return
+
+			case job := <-jobCh:
+				fmt.Println("received job: ", job)
+				err = downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, done)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}
 		}
 	}()
 }
@@ -92,7 +109,6 @@ func downloadYoutubeVideoAsMP3(url string, downloadDir string, verbose bool, cal
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
 	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s___%(id)s___.%(ext)s", url)
-
 	var stderr bytes.Buffer
 
 	if verbose {
