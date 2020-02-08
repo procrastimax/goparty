@@ -12,22 +12,22 @@ type MusicQueue struct {
 	streamers []beep.Streamer
 	//a list of all song names in the queue (youtube title)
 	//when skipping songs, etc. we dont want to change this slice, because so we have a complete history of all played and upcomming songs
-	songs      []string
-	isPaused   bool
-	currentIDx int
+	songs    []string
+	isPaused bool
+	currIdx  int
 }
 
 //Add adds a new entry to the musicqueue
-func (q *MusicQueue) Add(sogname string, streamers ...beep.Streamer) {
+func (q *MusicQueue) Add(songame string, streamers ...beep.Streamer) {
 	q.streamers = append(q.streamers, streamers...)
-	q.songs = append(q.songs, sogname)
+	q.songs = append(q.songs, songame)
 }
 
 //Skip skips to the next song
 func (q *MusicQueue) Skip() {
 	if len(q.streamers) > 0 {
 		q.streamers = q.streamers[1:]
-		q.currentIDx++
+		q.currIdx++
 	}
 }
 
@@ -62,7 +62,7 @@ func (q *MusicQueue) Stream(samples [][2]float64) (n int, ok bool) {
 		// the next streamer.
 		if !ok {
 			q.streamers = q.streamers[1:]
-			q.currentIDx++
+			q.currIdx++
 		}
 		// We update the number of filled samples.
 		filled += n

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta http-equiv="refresh" content="30"/>
         <title>Youtube Queue</title>
         <h1>Youtube Queue</h1>
     </head>
     <body>
         <form action="/" method="POST">
-           
         <div style="margin: 1em;"> 
             YouTube Link:<br>
             <input  type="url"
@@ -22,6 +22,13 @@
             <input type="submit" value="Add Song To Queue" style="margin-left: 1em;">
         </div>
         </form>
+        <div>
+            <ol>
+            {{range .Songs}}
+                <li>{{.}}</li>
+            {{end}}
+            </ol>
+        </div>
     </body>
 </html> 
 

@@ -17,9 +17,11 @@ package youtube
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -53,6 +55,11 @@ func Add(url string, userIP string) {
 	queue.Lock()
 
 	UserAddSong(userIP)
+
+	//cleaning URL
+	if strings.ContainsAny(url, "&") {
+		url = strings.Split(url, "&")[0]
+	}
 
 	song := downloadEntity{url, userIP, GetUserAddedSongs(userIP)}
 
@@ -118,9 +125,10 @@ func MustExistYoutubeDL() {
 }
 
 //StartDownloadWorker starts downlading
-func StartDownloadWorker() {
+func StartDownloadWorker(mp3AddCallback func(dataDir, filename string) error) {
 	fmt.Println("Started YT-Download Worker!")
 	var err error
+	var existsFilename string
 	go func() {
 		for {
 			select {
@@ -129,8 +137,24 @@ func StartDownloadWorker() {
 				return
 
 			case job := <-jobCh:
-				fmt.Println("received job: ", job)
-				err = downloadYoutubeVideoAsMP3(&job, downloadDir, isVerbose, done)
+				existsFilename, err = checkFileExist(job.url)
+
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				// when the file already we dont need to download it
+				if len(existsFilename) != 0 {
+					fmt.Println("Song already exists, not downloading again.")
+					err = mp3AddCallback(downloadDir, existsFilename)
+					if err != nil {
+						log.Fatalln(err)
+					}
+					done(job.userIP)
+					break
+				}
+
+				err = downloadYoutubeVideoAsMP3(&job, downloadDir, isVerbose, done, mp3AddCallback)
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -140,15 +164,15 @@ func StartDownloadWorker() {
 }
 
 //downloadYoutubeVideoAsMP3 downloads a youtube video in mp3 format
-func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose bool, callback func(userIP string)) error {
+func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose bool, callbackDone func(userIP string), callbackMP3Add func(songDir, filename string) error) error {
 	if len(youtubeDlDir) == 0 {
 		panic("youtube-dl directory variable was not set previously!")
 	}
 
-	defer callback(song.userIP)
+	defer callbackDone(song.userIP)
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
-	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s___%(id)s___.%(ext)s", song.url)
+	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s:_____:%(id)s.%(ext)s", song.url)
 	var stderr bytes.Buffer
 
 	if verbose {
@@ -160,5 +184,46 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 		errStr := string(stderr.Bytes())
 		return fmt.Errorf("%s", errStr)
 	}
+
+	existsFilename, err := checkFileExist(song.url)
+
+	if err != nil {
+		return err
+	}
+
+	// when the file already we dont need to download it
+	if len(existsFilename) != 0 {
+		err = callbackMP3Add(downloadDir, existsFilename)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+//checkFileExist takes a youtube url and looks for a file with the youtube video ID, if it exists, the filename is returned
+func checkFileExist(youtubeURL string) (string, error) {
+	files, err := ioutil.ReadDir(downloadDir)
+	if err != nil {
+		return "", err
+	}
+
+	strArr := strings.Split(youtubeURL, "v=")
+	if len(strArr) != 2 {
+		return "", fmt.Errorf("provided youtube link has not supported format (?v=ID) - %s", youtubeURL)
+	}
+
+	var videoIDStr string
+	if strings.ContainsAny(strArr[1], "&") {
+		videoIDStr = strings.Split(strArr[1], "&")[0]
+	}
+	videoIDStr = strArr[1]
+
+	for _, f := range files {
+		if strings.Contains(f.Name(), videoIDStr) {
+			return f.Name(), nil
+		}
+	}
+	return "", nil
 }

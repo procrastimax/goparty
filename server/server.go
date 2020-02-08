@@ -8,18 +8,28 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 	"yt-queue/mp3"
 	"yt-queue/youtube"
 )
 
 var (
-	templates        = template.Must(template.ParseFiles("tmpl/addsong.html", "tmpl/admin.html"))
+	templates        = template.Must(template.ParseFiles("tmpl/user.html", "tmpl/admin.html", "tmpl/error.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
 	validYoutubeLink = regexp.MustCompile("https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*")
+	playlist         songList
 )
 
-func renderTemplate(w http.ResponseWriter, tmpl string) {
-	err := templates.ExecuteTemplate(w, tmpl+".html", nil)
+type errorMessage struct {
+	ErrorMsg string
+}
+
+type songList struct {
+	Songs []string
+}
+
+func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
+	err := templates.ExecuteTemplate(w, tmpl+".html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -27,41 +37,43 @@ func renderTemplate(w http.ResponseWriter, tmpl string) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	userIP := r.RemoteAddr
+	playlist.Songs = mp3.GetCurrentPlaylist()
 	if r.Method == "GET" {
 		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
-			renderTemplate(w, "admin")
+			renderTemplate(w, "admin", playlist)
 		} else {
-			renderTemplate(w, "addsong")
+			renderTemplate(w, "user", playlist)
 		}
 
 	} else if r.Method == "POST" {
-		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
-			renderTemplate(w, "admin")
-			fmt.Println(r.FormValue("startBtn"))
-		} else {
-			renderTemplate(w, "addsong")
-		}
 		link := r.FormValue("ytlink")
-		if len(link) > 10 && validYoutubeLink.MatchString(link) {
-			fmt.Println("Added:", link)
+		if validYoutubeLink.MatchString(link) {
 			youtube.Add(link, userIP)
+			//we need to wait here shortly, so the website can update
+			time.Sleep(100 * time.Millisecond)
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
-			fmt.Fprintf(w, "\nYou entered a non-valid YoutTube link! Shame on you.")
+			renderTemplate(w, "error", errorMessage{ErrorMsg: "You entered an unvalid Youtube-Link!"})
 		}
 	} else {
 		fmt.Fprintf(w, "Only GET and POST methods are supported!")
 	}
 }
 
-func makeMusicHandler(fn func()) http.HandlerFunc {
+func makeAdminHandler(fn func()) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, "/", http.StatusFound)
-		fn()
+		userIP := r.RemoteAddr
+		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
+			http.Redirect(w, r, "/", http.StatusFound)
+			fn()
+		} else {
+			renderTemplate(w, "error", errorMessage{ErrorMsg: "You don't have permissions to do this! Only the admin machine can do this!"})
+		}
 	}
 }
 
@@ -70,16 +82,17 @@ func SetupServing() {
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
-	//setupMusic()
+	setupMusic()
 
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
-	serverMux.HandleFunc("/start", makeMusicHandler(mp3.StartSpeaker))
-	serverMux.HandleFunc("/pause", makeMusicHandler(mp3.PauseSpeaker))
-	serverMux.HandleFunc("/skip", makeMusicHandler(mp3.SkipSong))
-	serverMux.HandleFunc("/stop", makeMusicHandler(mp3.CloseSpeaker))
+	serverMux.HandleFunc("/start", makeAdminHandler(mp3.StartSpeaker))
+	serverMux.HandleFunc("/pause", makeAdminHandler(mp3.PauseSpeaker))
+	serverMux.HandleFunc("/skip", makeAdminHandler(mp3.SkipSong))
+	serverMux.HandleFunc("/stop", makeAdminHandler(mp3.CloseSpeaker))
+	serverMux.HandleFunc("/stopDL", makeAdminHandler(youtube.ExitDownloadWorker))
 
-	youtube.StartDownloadWorker()
+	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 
 	log.Fatal(http.ListenAndServe(":8080", serverMux))
 }
@@ -89,4 +102,5 @@ func setupMusic() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
+	mp3.StartSpeaker()
 }

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta http-equiv="refresh" content="30"/>
         <title>Youtube Queue</title>
         <h1>Youtube Queue</h1>
     </head>
@@ -29,6 +30,13 @@
                 <button type="submit" name="stopBtn" value="stop" formaction="/stop">Stop</button> 
             </div>
         </form>
+        <div>
+            <ol>
+            {{range .Songs}}
+                <li>{{.}}</li>
+            {{end}}
+            </ol>
+        </div>
     </body>
 </html> 
 
