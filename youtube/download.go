@@ -9,7 +9,7 @@ package youtube
 	then we pass another url to the channel to start the download again. If the queue is empty,
 	nothing happens.
 
-	TODO: Maybe improve this in the future by using more then one download job concurrently. But the basic
+	Maybe improve this in the future by using more then one download job concurrently. But the basic
 	idea behind the current implementation is, that while playing the first downloaded song, all other
 	are able to download more songs and the machine has time to download those other songs.
 */
@@ -27,27 +27,59 @@ var (
 	downloadDir  = "songs/"
 	youtubeDlDir = ""
 	isVerbose    = false
-	jobCh        = make(chan string, 2)
+	jobCh        = make(chan downloadEntity, 2)
 	quitCh       = make(chan bool)
 	queue        downloadQueue
 )
 
+type downloadEntity struct {
+	url        string
+	userIP     string
+	addedCount int
+}
+
+func (d downloadEntity) String() string {
+	return fmt.Sprintf("%s - %s -> %d", d.url, d.userIP, d.addedCount)
+}
+
 //downloadQueue handles information about upcoming songs to download
 type downloadQueue struct {
-	urls []string
+	songs []downloadEntity
 	sync.Mutex
 }
 
 //Add adds an url to the worker list of urls
-func Add(url string) {
+func Add(url string, userIP string) {
 	queue.Lock()
-	queue.urls = append(queue.urls, url)
 
-	if len(queue.urls) == 1 {
-		jobCh <- url
-		fmt.Println("Added first element")
+	UserAddSong(userIP)
+
+	song := downloadEntity{url, userIP, GetUserAddedSongs(userIP)}
+
+	if len(queue.songs) <= 1 {
+		queue.songs = append(queue.songs, song)
+	} else {
+		//insert the song in the queue, at this position, where the addedCount increases
+		//all songs in the beginning of the queue have a addedCount of 1
+		startValue := 1
+		for i, val := range queue.songs {
+			if val.addedCount != startValue {
+				//create copy of last element and append it to queue
+				queue.songs = append(queue.songs, queue.songs[len(queue.songs)-1])
+				copy(queue.songs[i+1:], queue.songs[i:len(queue.songs)-1])
+				queue.songs[i] = song
+				break
+			}
+			//when we haven't found a change yet, then also just append the song
+			if i == len(queue.songs)-1 {
+				queue.songs = append(queue.songs, song)
+			}
+		}
 	}
-	fmt.Println("download queue length:", len(queue.urls))
+
+	if len(queue.songs) == 1 {
+		jobCh <- song
+	}
 	queue.Unlock()
 }
 
@@ -56,14 +88,22 @@ func ExitDownloadWorker() {
 	quitCh <- true
 }
 
-//done removes the first element of the queue when done
-func done() {
-	fmt.Println("done")
+//done removes the first element of the queue when done, also decreases the addedcount of the user by 1 for all added songs
+func done(userIP string) {
 	queue.Lock()
-	queue.urls = queue.urls[1:]
-	if len(queue.urls) != 0 {
-		nextURL := queue.urls[0]
-		jobCh <- nextURL
+	UserSongDone(userIP)
+
+	for i, val := range queue.songs {
+		if val.userIP == userIP {
+			if val.addedCount > 0 {
+				queue.songs[i].addedCount--
+			}
+		}
+	}
+
+	queue.songs = queue.songs[1:]
+	if len(queue.songs) != 0 {
+		jobCh <- queue.songs[0]
 	}
 	queue.Unlock()
 }
@@ -90,7 +130,7 @@ func StartDownloadWorker() {
 
 			case job := <-jobCh:
 				fmt.Println("received job: ", job)
-				err = downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, done)
+				err = downloadYoutubeVideoAsMP3(&job, downloadDir, isVerbose, done)
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -100,15 +140,15 @@ func StartDownloadWorker() {
 }
 
 //downloadYoutubeVideoAsMP3 downloads a youtube video in mp3 format
-func downloadYoutubeVideoAsMP3(url string, downloadDir string, verbose bool, callback func()) error {
+func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose bool, callback func(userIP string)) error {
 	if len(youtubeDlDir) == 0 {
 		panic("youtube-dl directory variable was not set previously!")
 	}
 
-	defer callback()
+	defer callback(song.userIP)
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
-	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s___%(id)s___.%(ext)s", url)
+	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s___%(id)s___.%(ext)s", song.url)
 	var stderr bytes.Buffer
 
 	if verbose {

@@ -26,15 +26,16 @@ func renderTemplate(w http.ResponseWriter, tmpl string) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
+	userIP := r.RemoteAddr
 	if r.Method == "GET" {
-		if strings.Contains(r.RemoteAddr, "127.0.0.1") || strings.Contains(r.RemoteAddr, "::1") {
+		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
 			renderTemplate(w, "admin")
 		} else {
 			renderTemplate(w, "addsong")
 		}
 
 	} else if r.Method == "POST" {
-		if strings.Contains(r.RemoteAddr, "127.0.0.1") || strings.Contains(r.RemoteAddr, "::1") {
+		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
 			renderTemplate(w, "admin")
 			fmt.Println(r.FormValue("startBtn"))
 		} else {
@@ -43,7 +44,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		link := r.FormValue("ytlink")
 		if len(link) > 10 && validYoutubeLink.MatchString(link) {
 			fmt.Println("Added:", link)
-			youtube.Add(link)
+			youtube.Add(link, userIP)
 		} else {
 			fmt.Fprintf(w, "\nYou entered a non-valid YoutTube link! Shame on you.")
 		}
