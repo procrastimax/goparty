@@ -4,6 +4,7 @@ package mp3
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/faiface/beep"
@@ -63,20 +64,22 @@ func InitSpeaker() error {
 }
 
 //AddMP3ToMusicQueue adds a mp3 stream to the running music queue
-func AddMP3ToMusicQueue(filename string) error {
-	streamer, format, err := loadMp3File(filename)
+func AddMP3ToMusicQueue(songDir, filename string) error {
+	streamer, format, err := loadMp3File(songDir + filename)
 
 	if err != nil {
+		fmt.Println("error")
 		return fmt.Errorf("load mp3: %v", err)
 	}
 
 	// we need to resample the song sample rate to the speaker sample rate
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
-	queue.Add(filename, resampledStreamer)
+	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
+	queue.Add(songName, resampledStreamer)
 	speaker.Unlock()
 
-	fmt.Printf("Added song to queue: %s\n", filename)
+	fmt.Printf("Added song to queue: %s\n", songName)
 	return nil
 }
 
@@ -84,6 +87,11 @@ func AddMP3ToMusicQueue(filename string) error {
 func SkipSong() {
 	queue.Skip()
 	fmt.Println("Song skipped")
+}
+
+//GetCurrentPlaylist returns the current playing queue as youtube titles
+func GetCurrentPlaylist() []string {
+	return queue.songs[queue.currIdx:]
 }
 
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format
