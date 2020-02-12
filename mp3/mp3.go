@@ -3,10 +3,10 @@ package mp3
 
 import (
 	"fmt"
+	"goparty/user"
 	"os"
 	"strings"
 	"time"
-	"yt-queue/user"
 
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/mp3"

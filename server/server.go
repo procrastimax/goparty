@@ -3,15 +3,15 @@ package server
 
 import (
 	"fmt"
+	"goparty/mp3"
+	"goparty/user"
+	"goparty/youtube"
 	"html/template"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-	"yt-queue/mp3"
-	"yt-queue/user"
-	"yt-queue/youtube"
 )
 
 var (

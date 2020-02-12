@@ -17,14 +17,14 @@ package youtube
 import (
 	"bytes"
 	"fmt"
+	"goparty/mp3"
+	"goparty/user"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
-	"yt-queue/mp3"
-	"yt-queue/user"
 )
 
 var (
@@ -175,7 +175,8 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 	defer callbackDone(song.UserIP)
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
-	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s:_____:%(id)s.%(ext)s", song.url)
+	//audio quality 0=best, 9=worst, default=5
+	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--audio-quality=6", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s:_____:%(id)s.%(ext)s", song.url)
 	var stderr bytes.Buffer
 
 	if verbose {

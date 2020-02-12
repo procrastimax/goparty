@@ -2,8 +2,8 @@ package mp3
 
 import (
 	"fmt"
+	"goparty/user"
 	"strings"
-	"yt-queue/user"
 
 	"github.com/faiface/beep"
 )

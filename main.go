@@ -1,7 +1,7 @@
 package main
 
 import (
-	"yt-queue/server"
+	"goparty/server"
 )
 
 const (
