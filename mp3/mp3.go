@@ -42,7 +42,7 @@ func PauseSpeaker() {
 //StartSpeaker starts the speaking by using the musicqueue
 func StartSpeaker() {
 	//if queue is already initialized, then just resume playing
-	if len(queue.streamers) > 0 {
+	if len(queue.songs) > 0 {
 		fmt.Println("Speaker resumed")
 		queue.Resume()
 	} else {
@@ -64,7 +64,7 @@ func InitSpeaker() error {
 }
 
 //AddMP3ToMusicQueue adds a mp3 stream to the running music queue
-func AddMP3ToMusicQueue(songDir, filename string) error {
+func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	streamer, format, err := loadMp3File(songDir + filename)
 
 	if err != nil {
@@ -76,7 +76,7 @@ func AddMP3ToMusicQueue(songDir, filename string) error {
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
 	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
-	queue.Add(songName, resampledStreamer)
+	queue.Add(songName, userIP, resampledStreamer)
 	speaker.Unlock()
 
 	fmt.Printf("Added song to queue: %s\n", songName)
@@ -90,8 +90,8 @@ func SkipSong() {
 }
 
 //GetCurrentPlaylist returns the current playing queue as youtube titles
-func GetCurrentPlaylist() []string {
-	return queue.songs[queue.currIdx:]
+func GetCurrentPlaylist() []Song {
+	return queue.GetSongs()
 }
 
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format

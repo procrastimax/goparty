@@ -25,7 +25,7 @@ type errorMessage struct {
 }
 
 type songList struct {
-	Songs []string
+	Songs []mp3.Song
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -82,7 +82,7 @@ func SetupServing() {
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
-	//setupMusic()
+	setupMusic()
 
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
