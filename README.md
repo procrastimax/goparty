@@ -1,8 +1,6 @@
-# yt-queue - the youtube music queue software
+# goparty - the youtube music queue software
 
-##TODO
-- user restriction (X songs by a user cant be played in a row -> shuffle the download/playing queue)
-- a user should not add more than X songs per hour/day
+## TODO
 - user voting for bringing up downloaded songs which are currently in a queue
 
 ## Uses libraries & Binaries
