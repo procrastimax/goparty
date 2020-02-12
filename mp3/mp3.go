@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"yt-queue/user"
 
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/mp3"
@@ -18,7 +19,8 @@ const (
 )
 
 var (
-	queue MusicQueue
+	queue    MusicQueue
+	playlist []string
 )
 
 //DeleteMusicQueue deletes all currently active streamer on the speaker
@@ -30,6 +32,7 @@ func DeleteMusicQueue() {
 func CloseSpeaker() {
 	DeleteMusicQueue()
 	speaker.Close()
+	playlist = nil
 	fmt.Println("Speaker closed")
 }
 
@@ -77,8 +80,10 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	speaker.Lock()
 	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
 	queue.Add(songName, userIP, resampledStreamer)
-	speaker.Unlock()
 
+	playlist = append(playlist, songName+" - "+user.GetUserNameToIP(userIP))
+
+	speaker.Unlock()
 	fmt.Printf("Added song to queue: %s\n", songName)
 	return nil
 }
@@ -86,12 +91,13 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 //SkipSong skips a song in the music queue
 func SkipSong() {
 	queue.Done()
+	playlist = playlist[1:]
 	fmt.Println("Song skipped")
 }
 
-//GetCurrentPlaylist returns the current playing queue as youtube titles
-func GetCurrentPlaylist() []Song {
-	return queue.GetSongs()
+//GetCurrentPlaylist returns the current playlist with information about the song and who added the song
+func GetCurrentPlaylist() []string {
+	return playlist
 }
 
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format

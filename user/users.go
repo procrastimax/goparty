@@ -7,14 +7,15 @@ import (
 
 //users is the map datastructure which contains all users (identified by their ip) and how many songs they currently added for downloading
 var (
-	users = make(map[string]*QueuedSongs)
+	users = make(map[string]*Properties)
 	mutex = &sync.Mutex{}
 )
 
-//QueuedSongs keeps track of user added songs for downloading and playing
-type QueuedSongs struct {
+//Properties keeps track of user added songs for downloading and playing
+type Properties struct {
 	DownloadingSongs int
 	PlaylistSongs    int
+	UserName         string
 }
 
 //AddSongDownload increment the counter of added songs of a user by 1
@@ -23,7 +24,8 @@ func AddSongDownload(ip string) {
 	if _, ok := users[ip]; ok == true {
 		users[ip].DownloadingSongs++
 	} else {
-		users[ip] = &QueuedSongs{}
+		userName := GetUserNameToIP(ip)
+		users[ip] = &Properties{UserName: userName}
 		users[ip].DownloadingSongs = 1
 	}
 	mutex.Unlock()
@@ -35,7 +37,8 @@ func AddSongPlaylist(ip string) {
 	if _, ok := users[ip]; ok == true {
 		users[ip].PlaylistSongs++
 	} else {
-		users[ip] = &QueuedSongs{}
+		userName := GetUserNameToIP(ip)
+		users[ip] = &Properties{UserName: userName}
 		users[ip].PlaylistSongs = 1
 	}
 	mutex.Unlock()
@@ -64,13 +67,21 @@ func SongDonePlaying(ip string) {
 }
 
 //GetUserAddedSongs returns the number of added songs of a user, returns -1 if the user does not exist
-func GetUserAddedSongs(ip string) *QueuedSongs {
+func GetUserAddedSongs(ip string) *Properties {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if i, ok := users[ip]; ok == true {
 		return i
 	}
 	return nil
+}
+
+//GetUserName returns the user name to the given IP
+func GetUserName(ip string) string {
+	if i, ok := users[ip]; ok == true {
+		return i.UserName
+	}
+	return ""
 }
 
 //Count returns the size of the user map, can be used to see how many users added a song for downloading

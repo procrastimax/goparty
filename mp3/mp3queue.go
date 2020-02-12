@@ -18,21 +18,21 @@ type Song struct {
 }
 
 func (s Song) String() string {
-	return fmt.Sprintf("%s - %s : %d", s.SongName, getOnlyIP(&s.UserIP), s.SongCount)
+	return fmt.Sprintf("%s - %s : %d", s.SongName, *getOnlyIP(&s.UserIP), s.SongCount)
 }
 
-func getOnlyIP(ip *string) string {
+func getOnlyIP(ip *string) *string {
 	split := strings.Split(*ip, ":")
 	if len(split) > 1 {
-		return split[0]
+		return &split[0]
 	}
-	return *ip
+	return ip
 }
 
 //songStream is a basic song with extended stream field
 type songStream struct {
 	Song
-	streamer beep.Streamer
+	streamer *beep.Streamer
 }
 
 //MusicQueue is a datastruct to add more songs to the streamer
@@ -58,7 +58,7 @@ func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) 
 
 	songStream := songStream{
 		Song{SongName: songame, SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs, UserIP: userIP},
-		streamer,
+		&streamer,
 	}
 	//like in the downloading section, add the song at the position where the count of added songs differ from the next one
 	if len(q.songs) <= 1 {
@@ -126,7 +126,7 @@ func (q *MusicQueue) Stream(samples [][2]float64) (n int, ok bool) {
 		}
 
 		// We stream from the first streamer in the queue.
-		n, ok := q.songs[0].streamer.Stream(samples[filled:])
+		n, ok := (*q.songs[0].streamer).Stream(samples[filled:])
 		// If it's drained, we pop it from the queue, thus continuing with
 		// the next streamer.
 		if !ok {

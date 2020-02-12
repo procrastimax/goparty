@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"yt-queue/mp3"
+	"yt-queue/user"
 	"yt-queue/youtube"
 )
 
@@ -17,15 +18,16 @@ var (
 	templates        = template.Must(template.ParseFiles("tmpl/user.html", "tmpl/admin.html", "tmpl/error.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
 	validYoutubeLink = regexp.MustCompile("https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*")
-	playlist         songList
+	uidata           uiData
 )
 
 type errorMessage struct {
 	ErrorMsg string
 }
 
-type songList struct {
-	Songs []mp3.Song
+type uiData struct {
+	UserName string
+	Songs    []string
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -37,12 +39,15 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	userIP := r.RemoteAddr
-	playlist.Songs = mp3.GetCurrentPlaylist()
+
+	uidata.UserName = user.GetUserNameToIP(userIP)
+	uidata.Songs = mp3.GetCurrentPlaylist()
+
 	if r.Method == "GET" {
 		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
-			renderTemplate(w, "admin", playlist)
+			renderTemplate(w, "admin", uidata)
 		} else {
-			renderTemplate(w, "user", playlist)
+			renderTemplate(w, "user", uidata)
 		}
 
 	} else if r.Method == "POST" {
@@ -79,6 +84,12 @@ func makeAdminHandler(fn func()) http.HandlerFunc {
 
 //SetupServing sets up all we need to handle our "website"
 func SetupServing() {
+
+	err := user.InitUserNames("usernames.txt")
+	if err != nil {
+		log.Println(err)
+	}
+
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
