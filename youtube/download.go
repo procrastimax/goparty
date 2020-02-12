@@ -29,20 +29,11 @@ var (
 	downloadDir  = "songs/"
 	youtubeDlDir = ""
 	isVerbose    = false
-<<<<<<< HEAD
-	jobCh        = make(chan string)
-=======
 	jobCh        = make(chan downloadEntity, 2)
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 	quitCh       = make(chan bool)
 	queue        downloadQueue
 )
 
-<<<<<<< HEAD
-//downloadQueue handles information about upcoming songs to download
-type downloadQueue struct {
-	urls []string
-=======
 type downloadEntity struct {
 	url        string
 	userIP     string
@@ -56,45 +47,10 @@ func (d downloadEntity) String() string {
 //downloadQueue handles information about upcoming songs to download
 type downloadQueue struct {
 	songs []downloadEntity
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 	sync.Mutex
 }
 
 //Add adds an url to the worker list of urls
-<<<<<<< HEAD
-func Add(url string) {
-	queue.Lock()
-	queue.urls = append(queue.urls, url)
-
-	if len(queue.urls) == 1 {
-		jobCh <- url
-		fmt.Println("Added first element")
-	}
-	fmt.Println("download queue length:", len(queue.urls))
-	queue.Unlock()
-}
-
-//ExitDownloadWorker quits the donloading worker loop by sending a value on the quit channel
-func ExitDownloadWorker() {
-	quitCh <- true
-}
-
-//done removes the first element of the queue when done
-func done() {
-	fmt.Println("done")
-	queue.Lock()
-	queue.urls = queue.urls[1:]
-	defer queue.Unlock()
-	if len(queue.urls) != 0 {
-		//if we dont execute this in a different goroutine, we have a blocking send here
-		go func() {
-			queue.Lock()
-			nextURL := queue.urls[0]
-			queue.Unlock()
-			jobCh <- nextURL
-		}()
-	}
-=======
 func Add(url string, userIP string) {
 	queue.Lock()
 
@@ -157,7 +113,6 @@ func done(userIP string) {
 		jobCh <- queue.songs[0]
 	}
 	queue.Unlock()
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 }
 
 //MustExistYoutubeDL is a helper function, which panics when no youtube-dl exist
@@ -170,16 +125,10 @@ func MustExistYoutubeDL() {
 }
 
 //StartDownloadWorker starts downlading
-<<<<<<< HEAD
-func StartDownloadWorker() {
-	fmt.Println("Started YT-Download Worker!")
-	var err error
-=======
 func StartDownloadWorker(mp3AddCallback func(dataDir, filename string) error) {
 	fmt.Println("Started YT-Download Worker!")
 	var err error
 	var existsFilename string
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 	go func() {
 		for {
 			select {
@@ -188,10 +137,6 @@ func StartDownloadWorker(mp3AddCallback func(dataDir, filename string) error) {
 				return
 
 			case job := <-jobCh:
-<<<<<<< HEAD
-				fmt.Println("received job: ", job)
-				err = downloadYoutubeVideoAsMP3(job, downloadDir, isVerbose, done)
-=======
 				existsFilename, err = checkFileExist(job.url)
 
 				if err != nil {
@@ -210,7 +155,6 @@ func StartDownloadWorker(mp3AddCallback func(dataDir, filename string) error) {
 				}
 
 				err = downloadYoutubeVideoAsMP3(&job, downloadDir, isVerbose, done, mp3AddCallback)
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -228,11 +172,7 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 	defer callbackDone(song.userIP)
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
-<<<<<<< HEAD
-	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s___%(id)s___.%(ext)s", url)
-=======
 	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s:_____:%(id)s.%(ext)s", song.url)
->>>>>>> 35763bcdb38526a1cf52f00cd74ba98a3f43e660
 	var stderr bytes.Buffer
 
 	if verbose {
