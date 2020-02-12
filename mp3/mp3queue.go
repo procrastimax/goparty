@@ -56,18 +56,47 @@ func (q *MusicQueue) GetSongs() []Song {
 func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) {
 	user.AddSongPlaylist(userIP)
 
-	q.songs = append(q.songs, songStream{
+	songStream := songStream{
 		Song{SongName: songame, SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs, UserIP: userIP},
 		streamer,
-	})
+	}
+	//like in the downloading section, add the song at the position where the count of added songs differ from the next one
+	if len(q.songs) <= 1 {
+		q.songs = append(q.songs, songStream)
+	} else {
+		startValue := user.GetUserAddedSongs(userIP).PlaylistSongs
+		for i, val := range q.songs {
+			if val.SongCount > startValue {
+				//Insert element at position 'i'
+				//TODO: maybe dont actually swap the streamers, but instead the index for streamers in a seperate list
+				q.songs = append(q.songs, q.songs[len(q.songs)-1])
+				copy(q.songs[i+1:], q.songs[i:len(q.songs)-1])
+				q.songs[i] = songStream
+				break
+			}
+			//when we haven't found a change yet, then also just append the song, f.e. when all songs have count of 1
+			if i == len(q.songs)-1 {
+				q.songs = append(q.songs, songStream)
+			}
+		}
+	}
 }
 
-//Skip skips to the next song
-func (q *MusicQueue) Skip() {
+//Done skips to the next song
+func (q *MusicQueue) Done() {
 	if len(q.songs) > 0 {
-		user.SongDonePlaying(q.songs[0].UserIP)
+		userIP := q.songs[0].UserIP
+		user.SongDonePlaying(userIP)
 		q.songs = q.songs[1:]
 		q.currIdx++
+		//we need to iterate over the complete queue, and decrease the count of the user added songs
+		for i := range q.songs {
+			if q.songs[i].UserIP == userIP {
+				if q.songs[i].SongCount > 0 {
+					q.songs[i].SongCount--
+				}
+			}
+		}
 	}
 }
 
@@ -101,9 +130,7 @@ func (q *MusicQueue) Stream(samples [][2]float64) (n int, ok bool) {
 		// If it's drained, we pop it from the queue, thus continuing with
 		// the next streamer.
 		if !ok {
-			user.AddSongPlaylist(q.songs[0].UserIP)
-			q.songs = q.songs[1:]
-			q.currIdx++
+			q.Done()
 		}
 		// We update the number of filled samples.
 		filled += n

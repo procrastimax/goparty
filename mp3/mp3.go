@@ -85,7 +85,7 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 
 //SkipSong skips a song in the music queue
 func SkipSong() {
-	queue.Skip()
+	queue.Done()
 	fmt.Println("Song skipped")
 }
 

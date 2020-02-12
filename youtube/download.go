@@ -70,18 +70,17 @@ func Add(url string, userIP string) {
 	if len(queue.songs) <= 1 {
 		queue.songs = append(queue.songs, song)
 	} else {
-		//insert the song in the queue, at this position, where the addedCount increases
-		//all songs in the beginning of the queue have a addedCount of 1
-		startValue := 1
+		//insert the song in the queue, at this position, where the addedCount of a user increases
+		startValue := user.GetUserAddedSongs(userIP).DownloadingSongs
 		for i, val := range queue.songs {
 			if val.SongCount != startValue {
-				//create copy of last element and append it to queue
+				//Insert element at position 'i'
 				queue.songs = append(queue.songs, queue.songs[len(queue.songs)-1])
 				copy(queue.songs[i+1:], queue.songs[i:len(queue.songs)-1])
 				queue.songs[i] = song
 				break
 			}
-			//when we haven't found a change yet, then also just append the song
+			//when we haven't found a change yet, then also just append the song, f.e. when all songs have count of 1
 			if i == len(queue.songs)-1 {
 				queue.songs = append(queue.songs, song)
 			}
