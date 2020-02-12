@@ -25,7 +25,7 @@ type errorMessage struct {
 }
 
 type songList struct {
-	Songs []string
+	Songs []mp3.Song
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
