@@ -9,7 +9,6 @@
 - youtube-dl -> https://ytdl-org.github.io/youtube-dl
 - ffmpeg -> requiered by youtube-dl for converting to mp3
 - libasound2-dev
-- youtube-dl (https://ytdl-org.github.io/youtube-dl/download.html)
 
 ## Requirements
 - alsa config needed
