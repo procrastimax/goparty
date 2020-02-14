@@ -1,13 +1,33 @@
 <!DOCTYPE html>
-<html>
-    <head>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoParty - Youtube Queue</title>
+<style>
+	body{
+		margin:1em auto;
+		max-width:40em;
+		padding:0 .62em;
+		font:1.2em/1.62 sans-serif;
+	}
+	h1,h2,h3 {
+		line-height:1.2;
+	}
+	@media print{
+		body{
+			max-width:none
+		}
+	}
+</style>
+
+<head>
         <meta http-equiv="refresh" content="30"/>
         <title>Youtube Queue</title>
         <h1>Youtube Queue</h1>
-    </head>
+</head>
     <body style='font-family:"sans-serif"'>
         <div>Hello, you are <b>{{ .UserName }}</b>!</div>
-        <form method="POST">
+        <form action="/" method="POST">
         <div style="margin: 1em;"> 
             YouTube Link:<br>
             <input  type="url"
@@ -22,14 +42,6 @@
         <div>
             <input type="submit" value="Add Song To Queue" style="margin-left: 1em;">
         </div>
-        </form>
-        <form action= "/start" method="POST">
-            <div style="margin: 1em;">
-                <button type="submit" name="startBtn" value="start">Start</button> 
-                <button type="submit" name="pauseBtn" value="pause" formaction="/pause">Pause</button> 
-                <button type="submit" name="skipBtn" value="skip" formaction="/skip">Skip</button> 
-                <button type="submit" name="stopBtn" value="stop" formaction="/stop">Stop</button> 
-            </div>
         </form>
         <div>
             <ol>

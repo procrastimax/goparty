@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	templates        = template.Must(template.ParseFiles("tmpl/user.html", "tmpl/admin.html", "tmpl/error.html"))
+	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
 	validYoutubeLink = regexp.MustCompile("https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*")
 	uidata           uiData
@@ -39,9 +39,12 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	userIP := r.RemoteAddr
-
 	uidata.UserName = user.GetUserNameToIP(userIP)
 	uidata.Songs = mp3.GetCurrentPlaylist()
+
+	if i := r.FormValue("task"); len(i) != 0 {
+		handleAdminTasks(i)
+	}
 
 	if r.Method == "GET" {
 		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
@@ -65,20 +68,19 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func makeAdminHandler(fn func()) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		m := validPath.FindStringSubmatch(r.URL.Path)
-		if m == nil {
-			http.NotFound(w, r)
-			return
-		}
-		userIP := r.RemoteAddr
-		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
-			http.Redirect(w, r, "/", http.StatusFound)
-			fn()
-		} else {
-			renderTemplate(w, "error", errorMessage{ErrorMsg: "You don't have permissions to do this! Only the admin machine can do this!"})
-		}
+func handleAdminTasks(task string) {
+	switch task {
+	case "start":
+		mp3.StartSpeaker()
+	case "stop":
+		mp3.CloseSpeaker()
+	case "skip":
+		mp3.SkipSong()
+	case "pause":
+		mp3.PauseSpeaker()
+	default:
+		log.Println("Unknown admin task received!")
+
 	}
 }
 
@@ -93,15 +95,10 @@ func SetupServing() {
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
-	setupMusic()
+	//setupMusic()
 
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
-	serverMux.HandleFunc("/start", makeAdminHandler(mp3.StartSpeaker))
-	serverMux.HandleFunc("/pause", makeAdminHandler(mp3.PauseSpeaker))
-	serverMux.HandleFunc("/skip", makeAdminHandler(mp3.SkipSong))
-	serverMux.HandleFunc("/stop", makeAdminHandler(mp3.CloseSpeaker))
-	serverMux.HandleFunc("/stopDL", makeAdminHandler(youtube.ExitDownloadWorker))
 
 	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 
