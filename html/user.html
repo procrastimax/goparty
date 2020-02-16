@@ -1,55 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GoParty - Youtube Queue</title>
-<style>
-	body{
-		margin:1em auto;
-		max-width:40em;
-		padding:0 .62em;
-		font:1.2em/1.62 sans-serif;
-	}
-	h1,h2,h3 {
-		line-height:1.2;
-	}
-	@media print{
-		body{
-			max-width:none
-		}
-	}
-</style>
-
 <head>
-        <meta http-equiv="refresh" content="30"/>
-        <title>Youtube Queue</title>
-        <h1>Youtube Queue</h1>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoParty - Music Queue</title>
+    <style>
+        body{
+            margin: 1em auto;
+            max-width: 75%;
+            font: 1.2em/1.62 sans-serif;
+        }
+        h1,h2,h3 {
+            line-height:1.2;
+        }
+        li {
+            margin: 1em auto;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+            position: relative;
+            display: flex;
+            text-align: left;
+            min-height: 2.5em;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
-    <body style='font-family:"sans-serif"'>
-        <div>Hello, you are <b>{{ .UserName }}</b>!</div>
-        <form action="/" method="POST">
-        <div style="margin: 1em;"> 
+<body>
+    <p>Hello, you are <b>{{ .UserName }}</b>!</p>
+    <form method="POST" style="margin: 1em auto;">
+        <div>
             YouTube Link:<br>
             <input  type="url"
                     name="ytlink"
-                    maxlength="80"
-                    size="80"
+                    style="min-width: 10em; width: 66%;"
                     autofocus
+                    maxlength="100"
                     placeholder="f.e. https://www.youtube.com/watch?v=hHW1oY26kxQ"
                     required
                     pattern="https://.*">
         </div>
-        <div>
-            <input type="submit" value="Add Song To Queue" style="margin-left: 1em;">
+        <button type="submit" style="margin-top: 0.5em;  position: relative; display: flex; justify-content: center; align-items: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" style="margin-right: 0.25em;">
+                <path d="M0 0h24v24H0z" fill="none"/>
+                <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/>
+            </svg>
+            Add To Playlist
+        </button>
+    </form>
+
+    <div>
+         <!--<ol>
+             </ol>-->
+   Playlist:
+        <ol>
+        {{range .Songs}}
+             <li>
+                 <div style="padding-left: 5%; width: 70%; margin: auto; text-align: center;">{{.}}</div>
+                <svg xmlns="http://www.w3.org/2000/svg" style="margin: auto 1em auto 1em; width: 10%; fill: green; " height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/><path d="M9 21h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2zM9 9l4.34-4.34L12 10h9v2l-3 7H9V9zM1 9h4v12H1z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" style="margin: auto 1em auto 1em; width: 10%; fill: red" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm0 12l-4.34 4.34L12 14H3v-2l3-7h9v10zm4-12h4v12h-4z"/></svg>
+            </li>
+        {{end}}
+        </ol>
         </div>
-        </form>
-        <div>
-            <ol>
-            {{range .Songs}}
-                <li>{{.}}</li>
-            {{end}}
-            </ol>
-        </div>
-    </body>
-</html> 
+</body>
+</html>
 
