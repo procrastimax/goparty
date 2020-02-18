@@ -8,6 +8,7 @@ import (
 	"goparty/youtube"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,7 +18,7 @@ import (
 var (
 	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
-	validYoutubeLink = regexp.MustCompile("https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*")
+	validYoutubeLink = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
 	uidata           uiData
 )
 
@@ -26,8 +27,9 @@ type errorMessage struct {
 }
 
 type uiData struct {
-	UserName string
-	Songs    []string
+	Name    string
+	AdminIP string
+	Songs   []mp3.Song
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -39,15 +41,22 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	userIP := r.RemoteAddr
-	uidata.UserName = user.GetUserNameToIP(userIP)
+
+	//convert localhost ipv6 resolution to an ipv4 address
+	if strings.Contains(userIP, "::1") {
+		userIP = "127.0.0.1:1234"
+	}
+
+	uidata.Name = user.GetUserNameToIP(userIP)
 	uidata.Songs = mp3.GetCurrentPlaylist()
 
 	if i := r.FormValue("task"); len(i) != 0 {
 		handleAdminTasks(i)
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
 	if r.Method == "GET" {
-		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
+		if strings.Contains(userIP, "127.0.0.1") {
 			renderTemplate(w, "admin", uidata)
 		} else {
 			renderTemplate(w, "user", uidata)
@@ -58,7 +67,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		if validYoutubeLink.MatchString(link) {
 			youtube.Add(link, userIP)
 			//we need to wait here shortly, so the website can update
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			renderTemplate(w, "error", errorMessage{ErrorMsg: "You entered an unvalid Youtube-Link!"})
@@ -92,6 +101,10 @@ func SetupServing() {
 		log.Println(err)
 	}
 
+	serverIP := getLocalServerAdress()
+
+	uidata.AdminIP = serverIP
+
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
@@ -103,6 +116,40 @@ func SetupServing() {
 	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 
 	log.Fatal(http.ListenAndServe(":8080", serverMux))
+}
+
+func getLocalServerAdress() string {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		//shutdown the program at this stage, because something with the network card must be wrong
+		log.Fatalln("Could not retrieve local music server IP address!", err)
+	}
+
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+
+		if err != nil {
+			log.Fatalln("Could not retrieve local music server IP address!", err)
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ip.String() != "127.0.0.1" {
+				ip4Split := strings.Split(ip.String(), ".")
+				if len(ip4Split) == 4 {
+					return ip.String()
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func setupMusic() {

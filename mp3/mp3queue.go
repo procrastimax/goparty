@@ -1,7 +1,6 @@
 package mp3
 
 import (
-	"fmt"
 	"goparty/user"
 	"strings"
 
@@ -12,14 +11,15 @@ import (
 
 //Song representing a single song from the downloaded queue of songs
 type Song struct {
-	SongCount int
 	SongName  string
 	UserIP    string
+	UserName  string
+	SongCount int
 }
 
-func (s Song) String() string {
-	return fmt.Sprintf("%s - %s : %d", s.SongName, *getOnlyIP(&s.UserIP), s.SongCount)
-}
+/*func (s Song) String() string {
+	return fmt.Sprintf("%s - %s -> %s : %d", s.SongName, *getOnlyIP(&s.UserIP), user.GetUserName(s.UserIP), s.SongCount)
+}*/
 
 func getOnlyIP(ip *string) *string {
 	split := strings.Split(*ip, ":")
@@ -57,9 +57,13 @@ func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) 
 	user.AddSongPlaylist(userIP)
 
 	songStream := songStream{
-		Song{SongName: songame, SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs, UserIP: userIP},
+		Song{SongName: songame,
+			SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs,
+			UserIP:    userIP,
+			UserName:  user.GetUserName(userIP)},
 		&streamer,
 	}
+
 	//like in the downloading section, add the song at the position where the count of added songs differ from the next one
 	if len(q.songs) <= 1 {
 		q.songs = append(q.songs, songStream)

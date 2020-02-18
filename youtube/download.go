@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -213,16 +214,39 @@ func checkFileExist(youtubeURL string) (string, error) {
 		return "", err
 	}
 
-	strArr := strings.Split(youtubeURL, "v=")
-	if len(strArr) != 2 {
-		return "", fmt.Errorf("provided youtube link has not supported format (?v=ID) - %s", youtubeURL)
+	var videoIDStr string
+
+	//we got a youtube shortform url
+	isMatch, err := regexp.MatchString("https{0,1}://youtu\\.be/\\S*", youtubeURL)
+
+	if err != nil {
+		log.Fatalln("Regex for checking url against http://youtu.be/ link is invalid!")
 	}
 
-	var videoIDStr string
-	if strings.ContainsAny(strArr[1], "&") {
-		videoIDStr = strings.Split(strArr[1], "&")[0]
+	if isMatch {
+		strArr := strings.Split(youtubeURL, "/")
+		if len(strArr) != 4 {
+			return "", fmt.Errorf("provided youtube link has not supported format https://youtu.be/ID - %s", youtubeURL)
+		}
+
+		if strings.ContainsAny(strArr[3], "?") {
+			videoIDStr = strings.Split(strArr[3], "?")[0]
+		} else {
+			videoIDStr = strArr[3]
+		}
+
+	} else {
+		strArr := strings.Split(youtubeURL, "v=")
+		if len(strArr) != 2 {
+			return "", fmt.Errorf("provided youtube link has not supported format (?v=ID) - %s", youtubeURL)
+		}
+
+		if strings.ContainsAny(strArr[1], "&") {
+			videoIDStr = strings.Split(strArr[1], "&")[0]
+		} else {
+			videoIDStr = strArr[1]
+		}
 	}
-	videoIDStr = strArr[1]
 
 	for _, f := range files {
 		if strings.Contains(f.Name(), videoIDStr) {
