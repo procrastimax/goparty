@@ -32,6 +32,11 @@ type uiData struct {
 	Songs   []mp3.Song
 }
 
+//returns a given ID increased by one, so we get 1 instead of 0 -> only for visual purpose
+func (ui uiData) GetRealID(id int) int {
+	return id + 1
+}
+
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	err := templates.ExecuteTemplate(w, tmpl+".html", data)
 	if err != nil {
@@ -77,6 +82,23 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func upvoteHandler(w http.ResponseWriter, r *http.Request) {
+	userIP := r.RemoteAddr
+
+	//convert localhost ipv6 resolution to an ipv4 address
+	if strings.Contains(userIP, "::1") {
+		userIP = "127.0.0.1:1234"
+	}
+
+	if r.Method == "POST" {
+		link := r.FormValue("id")
+		fmt.Println(link)
+		http.Redirect(w, r, "/", http.StatusFound)
+	} else {
+		fmt.Fprintf(w, "Only POST methods are supported!")
+	}
+}
+
 func handleAdminTasks(task string) {
 	switch task {
 	case "start":
@@ -108,10 +130,11 @@ func SetupServing() {
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
-	setupMusic()
+	//setupMusic()
 
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
+	serverMux.HandleFunc("/upvote", upvoteHandler)
 
 	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 
