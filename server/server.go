@@ -17,7 +17,7 @@ import (
 var (
 	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
-	validYoutubeLink = regexp.MustCompile("https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*")
+	validYoutubeLink = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
 	uidata           uiData
 )
 
