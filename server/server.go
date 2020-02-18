@@ -8,6 +8,7 @@ import (
 	"goparty/youtube"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -26,8 +27,9 @@ type errorMessage struct {
 }
 
 type uiData struct {
-	Name  string
-	Songs []mp3.Song
+	Name    string
+	AdminIP string
+	Songs   []mp3.Song
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -100,6 +102,10 @@ func SetupServing() {
 		log.Println(err)
 	}
 
+	serverIP := getLocalServerAdress()
+
+	uidata.AdminIP = serverIP
+
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
@@ -111,6 +117,40 @@ func SetupServing() {
 	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 
 	log.Fatal(http.ListenAndServe(":8080", serverMux))
+}
+
+func getLocalServerAdress() string {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		//shutdown the program at this stage, because something with the network card must be wrong
+		log.Fatalln("Could not retrieve local music server IP address!", err)
+	}
+
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+
+		if err != nil {
+			log.Fatalln("Could not retrieve local music server IP address!", err)
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ip.String() != "127.0.0.1" {
+				ip4Split := strings.Split(ip.String(), ".")
+				if len(ip4Split) == 4 {
+					return ip.String()
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func setupMusic() {

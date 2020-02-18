@@ -220,7 +220,7 @@ func checkFileExist(youtubeURL string) (string, error) {
 	isMatch, err := regexp.MatchString("https{0,1}://youtu\\.be/\\S*", youtubeURL)
 
 	if err != nil {
-		panic(err)
+		log.Fatalln("Regex for checking url against http://youtu.be/ link is invalid!")
 	}
 
 	if isMatch {
