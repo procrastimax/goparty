@@ -39,15 +39,22 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	userIP := r.RemoteAddr
+
+	//convert localhost ipv6 resolution to an ipv4 address
+	if strings.Contains(userIP, "::1") {
+		userIP = "127.0.0.1"
+	}
+
 	uidata.UserName = user.GetUserNameToIP(userIP)
 	uidata.Songs = mp3.GetCurrentPlaylist()
 
 	if i := r.FormValue("task"); len(i) != 0 {
 		handleAdminTasks(i)
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
 	if r.Method == "GET" {
-		if strings.Contains(userIP, "127.0.0.1") || strings.Contains(userIP, "::1") {
+		if strings.Contains(userIP, "127.0.0.1") {
 			renderTemplate(w, "admin", uidata)
 		} else {
 			renderTemplate(w, "user", uidata)
