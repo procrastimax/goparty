@@ -20,7 +20,7 @@ const (
 
 var (
 	queue    MusicQueue
-	playlist []string
+	playlist []Song
 )
 
 //DeleteMusicQueue deletes all currently active streamer on the speaker
@@ -81,7 +81,11 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
 	queue.Add(songName, userIP, resampledStreamer)
 
-	playlist = append(playlist, songName+" - "+user.GetUserNameToIP(userIP))
+	playlist = append(playlist, Song{
+		SongName:  songName,
+		UserIP:    userIP,
+		SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs,
+		UserName:  user.GetUserName(userIP)})
 
 	speaker.Unlock()
 	fmt.Printf("Added song to queue: %s\n", songName)
@@ -96,7 +100,7 @@ func SkipSong() {
 }
 
 //GetCurrentPlaylist returns the current playlist with information about the song and who added the song
-func GetCurrentPlaylist() []string {
+func GetCurrentPlaylist() []Song {
 	return playlist
 }
 

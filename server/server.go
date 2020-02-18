@@ -26,11 +26,12 @@ type errorMessage struct {
 }
 
 type uiData struct {
-	UserName string
-	Songs    []string
+	Name  string
+	Songs []mp3.Song
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
+	//fmt.Println(data)
 	err := templates.ExecuteTemplate(w, tmpl+".html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -42,10 +43,10 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 
 	//convert localhost ipv6 resolution to an ipv4 address
 	if strings.Contains(userIP, "::1") {
-		userIP = "127.0.0.1"
+		userIP = "127.0.0.1:1234"
 	}
 
-	uidata.UserName = user.GetUserNameToIP(userIP)
+	uidata.Name = user.GetUserNameToIP(userIP)
 	uidata.Songs = mp3.GetCurrentPlaylist()
 
 	if i := r.FormValue("task"); len(i) != 0 {
@@ -65,7 +66,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		if validYoutubeLink.MatchString(link) {
 			youtube.Add(link, userIP)
 			//we need to wait here shortly, so the website can update
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			renderTemplate(w, "error", errorMessage{ErrorMsg: "You entered an unvalid Youtube-Link!"})
