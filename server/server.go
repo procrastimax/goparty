@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,19 +23,26 @@ var (
 	uidata           uiData
 )
 
+type userIP string
+
 type errorMessage struct {
 	ErrorMsg string
 }
 
 type uiData struct {
 	Name    string
+	IP      string
 	AdminIP string
 	Songs   []mp3.Song
 }
 
-//returns a given ID increased by one, so we get 1 instead of 0 -> only for visual purpose
-func (ui uiData) GetRealID(id int) int {
-	return id + 1
+func (ui uiData) IsSongUpvotedByUser(songID int) bool {
+	for _, elem := range ui.Songs[songID].GetUpvotes() {
+		if elem == ui.IP {
+			return true
+		}
+	}
+	return false
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -45,15 +53,18 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
-	userIP := r.RemoteAddr
-
+	var ip userIP
 	//convert localhost ipv6 resolution to an ipv4 address
-	if strings.Contains(userIP, "::1") {
-		userIP = "127.0.0.1:1234"
+	if strings.Contains(r.RemoteAddr, "::1") {
+		ip = "127.0.0.1"
+	} else {
+		ip = userIP(r.RemoteAddr)
+		ip = ip.normalizeIP()
 	}
 
-	uidata.Name = user.GetUserNameToIP(userIP)
+	uidata.Name = user.GetUserNameToIP(ip.String())
 	uidata.Songs = mp3.GetCurrentPlaylist()
+	uidata.IP = ip.String()
 
 	if i := r.FormValue("task"); len(i) != 0 {
 		handleAdminTasks(i)
@@ -61,7 +72,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		if strings.Contains(userIP, "127.0.0.1") {
+		if strings.Contains(ip.String(), "127.0.0.1") {
 			renderTemplate(w, "admin", uidata)
 		} else {
 			renderTemplate(w, "user", uidata)
@@ -70,7 +81,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		link := r.FormValue("ytlink")
 		if validYoutubeLink.MatchString(link) {
-			youtube.Add(link, userIP)
+			youtube.Add(link, ip.String())
 			//we need to wait here shortly, so the website can update
 			time.Sleep(150 * time.Millisecond)
 			http.Redirect(w, r, "/", http.StatusFound)
@@ -83,16 +94,25 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func upvoteHandler(w http.ResponseWriter, r *http.Request) {
-	userIP := r.RemoteAddr
+	var ip userIP
 
 	//convert localhost ipv6 resolution to an ipv4 address
-	if strings.Contains(userIP, "::1") {
-		userIP = "127.0.0.1:1234"
+	if strings.Contains(r.RemoteAddr, "::1") {
+		ip = "127.0.0.1"
+	} else {
+		ip = userIP(r.RemoteAddr)
+		ip = ip.normalizeIP()
 	}
 
 	if r.Method == "POST" {
-		link := r.FormValue("id")
-		fmt.Println(link)
+		idStr := r.FormValue("id")
+
+		id, err := strconv.Atoi(idStr)
+
+		if err != nil {
+			fmt.Printf("upvoteHandler: could not convert upvoted song id to int %s", err)
+		}
+		mp3.UpvoteSong(id, ip.String())
 		http.Redirect(w, r, "/", http.StatusFound)
 	} else {
 		fmt.Fprintf(w, "Only POST methods are supported!")
@@ -130,7 +150,7 @@ func SetupServing() {
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
 
-	//setupMusic()
+	setupMusic()
 
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
@@ -164,10 +184,11 @@ func getLocalServerAdress() string {
 				ip = v.IP
 			}
 
-			if ip.String() != "127.0.0.1" {
-				ip4Split := strings.Split(ip.String(), ".")
-				if len(ip4Split) == 4 {
-					return ip.String()
+			var ipv4 userIP = userIP(ip.String())
+
+			if ipv4.String() != "127.0.0.1" {
+				if ipv4.isIPv4() {
+					return ipv4.String()
 				}
 			}
 		}
@@ -181,4 +202,26 @@ func setupMusic() {
 		log.Fatalln(err.Error())
 	}
 	mp3.StartSpeaker()
+}
+
+func (ip userIP) String() string {
+	return string(ip)
+}
+
+func (ip userIP) normalizeIP() userIP {
+	if strings.Contains(ip.String(), ":") {
+		return userIP(strings.Split(ip.String(), ":")[0])
+	}
+	return ip
+}
+
+func (ip userIP) isIPv4() bool {
+	if ip.String() != "127.0.0.1" {
+		ip4Split := strings.Split(ip.String(), ".")
+		if len(ip4Split) == 4 {
+			return true
+		}
+		return false
+	}
+	return true
 }

@@ -3,7 +3,6 @@ package mp3
 
 import (
 	"fmt"
-	"goparty/user"
 	"os"
 	"strings"
 	"time"
@@ -19,20 +18,14 @@ const (
 )
 
 var (
-	queue    MusicQueue
-	playlist []Song
+	queue MusicQueue
 )
-
-//DeleteMusicQueue deletes all currently active streamer on the speaker
-func DeleteMusicQueue() {
-	speaker.Clear()
-}
 
 //CloseSpeaker closes the speaker
 func CloseSpeaker() {
-	DeleteMusicQueue()
+	speaker.Clear()
+	queue.Clear()
 	speaker.Close()
-	playlist = nil
 	fmt.Println("Speaker closed")
 }
 
@@ -81,12 +74,6 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
 	queue.Add(songName, userIP, resampledStreamer)
 
-	playlist = append(playlist, Song{
-		SongName:  songName,
-		UserIP:    userIP,
-		SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs,
-		UserName:  user.GetUserName(userIP)})
-
 	speaker.Unlock()
 	fmt.Printf("Added song to queue: %s\n", songName)
 	return nil
@@ -95,13 +82,12 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 //SkipSong skips a song in the music queue
 func SkipSong() {
 	queue.Done()
-	playlist = playlist[1:]
 	fmt.Println("Song skipped")
 }
 
 //GetCurrentPlaylist returns the current playlist with information about the song and who added the song
 func GetCurrentPlaylist() []Song {
-	return playlist
+	return queue.GetSongs()
 }
 
 //loadMp3File loads an mp3 file from the storage and returns it as a streamer and format
@@ -126,4 +112,9 @@ func loadMp3File(filename string) (*beep.StreamSeekCloser, *beep.Format, error) 
 	}
 
 	return &streamer, &format, nil
+}
+
+//UpvoteSong upvotes the given songID with the userIP
+func UpvoteSong(songID int, userIP string) {
+	queue.UpvoteSong(songID, userIP)
 }

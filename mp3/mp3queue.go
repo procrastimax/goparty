@@ -1,8 +1,10 @@
 package mp3
 
 import (
+	"fmt"
 	"goparty/user"
 	"strings"
+	"sync"
 
 	"github.com/faiface/beep"
 )
@@ -15,11 +17,40 @@ type Song struct {
 	UserIP    string
 	UserName  string
 	SongCount int
+	//upvotes is a list of strings, each string represents a userIP which upvoted the song
+	upvotes []string
 }
 
-/*func (s Song) String() string {
+//Upvote adds a user who upvoted the song to the upvotes list
+func (s *Song) Upvote(userIP string) {
+	//check if the upvotes list got initialized before
+	//because most likely we dont need the list
+	if s.upvotes == nil {
+		// upvotes list is nil, we need to initialize it
+		s.upvotes = make([]string, 0)
+	}
+	for _, elem := range s.upvotes {
+		if elem == userIP {
+			//user already upvoted the song, do nothing
+			return
+		}
+	}
+	s.upvotes = append(s.upvotes, userIP)
+}
+
+//GetUpvotes returns a list of all users who upvoted the song
+func (s *Song) GetUpvotes() []string {
+	return s.upvotes
+}
+
+//GetUpvotesCount returns the number of upvotes for the song
+func (s *Song) GetUpvotesCount() int {
+	return len(s.upvotes)
+}
+
+func (s Song) String() string {
 	return fmt.Sprintf("%s - %s -> %s : %d", s.SongName, *getOnlyIP(&s.UserIP), user.GetUserName(s.UserIP), s.SongCount)
-}*/
+}
 
 func getOnlyIP(ip *string) *string {
 	split := strings.Split(*ip, ":")
@@ -41,6 +72,7 @@ type MusicQueue struct {
 	songs    []songStream
 	isPaused bool
 	currIdx  int
+	sync.Mutex
 }
 
 //GetSongs returns all songs from the music queue without streamer
@@ -54,6 +86,7 @@ func (q *MusicQueue) GetSongs() []Song {
 
 //Add adds a new entry to the musicqueue
 func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) {
+	q.Lock()
 	user.AddSongPlaylist(userIP)
 
 	songStream := songStream{
@@ -71,8 +104,12 @@ func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) 
 		startValue := user.GetUserAddedSongs(userIP).PlaylistSongs
 		for i, val := range q.songs {
 			if val.SongCount > startValue {
+				//when the following song has more upvotes, then skip it
+				//and check next song
+				if val.GetUpvotesCount() > 0 {
+					break
+				}
 				//Insert element at position 'i'
-				//TODO: maybe dont actually swap the streamers, but instead the index for streamers in a seperate list
 				q.songs = append(q.songs, q.songs[len(q.songs)-1])
 				copy(q.songs[i+1:], q.songs[i:len(q.songs)-1])
 				q.songs[i] = songStream
@@ -84,10 +121,57 @@ func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) 
 			}
 		}
 	}
+	q.Unlock()
+}
+
+//UpvoteSong adds a user to the upvoted song specified by the songID which is the current ID of the song in the queue
+func (q *MusicQueue) UpvoteSong(songID int, userIP string) {
+	q.Lock()
+	defer q.Unlock()
+	q.songs[songID].Upvote(userIP)
+
+	//after upvoting the song we want to decrease the added count, so the song moves forward in the queue
+	//therefore we need to check the element before the upvoted song
+
+	//check if song is already first element or 2nd, if this is the case then do nothing
+	if songID <= 1 {
+		return
+	}
+
+	//check song before current song, if the song before this song has a different SongCount value
+	//then we need to decrease the songcount for this song so when adding new songs we have coherent values
+	if q.songs[songID-1].SongCount == q.songs[songID].SongCount {
+		q.songs[songID].SongCount--
+	}
+
+	//only swap songs, when the previous song has less upvotes than the current one
+	if q.songs[songID-1].GetUpvotesCount() >= q.songs[songID].GetUpvotesCount() {
+		return
+	}
+
+	temp := q.songs[songID-1]
+	q.songs[songID-1] = q.songs[songID]
+	q.songs[songID] = temp
+}
+
+//GetUpvotesForSong returns the upvotes for a given songID
+func (q *MusicQueue) GetUpvotesForSong(songID int) []string {
+	return q.songs[songID].GetUpvotes()
+}
+
+//CheckUserUpvotedSong returns true if the given userIP already upvoted the song with the given songID
+func (q *MusicQueue) CheckUserUpvotedSong(songID int, userIP string) bool {
+	for _, elem := range q.songs[songID].upvotes {
+		if elem == userIP {
+			return true
+		}
+	}
+	return false
 }
 
 //Done skips to the next song
 func (q *MusicQueue) Done() {
+	q.Lock()
 	if len(q.songs) > 0 {
 		userIP := q.songs[0].UserIP
 		user.SongDonePlaying(userIP)
@@ -102,6 +186,7 @@ func (q *MusicQueue) Done() {
 			}
 		}
 	}
+	q.Unlock()
 }
 
 //Pause pauses the music
@@ -112,6 +197,11 @@ func (q *MusicQueue) Pause() {
 //Resume resumes music
 func (q *MusicQueue) Resume() {
 	q.isPaused = false
+}
+
+//Clear deletes all entries in the music queue
+func (q *MusicQueue) Clear() {
+	q = &MusicQueue{}
 }
 
 //Stream implements the streamer interface

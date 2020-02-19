@@ -3,68 +3,125 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="60">
+    <meta http-equiv="Content-Language" content="en">
     <title>GoParty - Music Queue</title>
     <style>
         body{
             margin: 1em auto;
-            max-width: 75%;
+            max-width: 90%;
             font: 1.2em/1.62 sans-serif;
+            background-color: #fefefe;
         }
-        h1,h2,h3 {
-            line-height:1.2;
-        }
+        
         li {
-            margin: 1em auto;
-            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+            margin: 0.5em auto;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.19);
+            display: flex;
+            min-height: 1.5em;
+            width: 100%;
             position: relative;
             display: flex;
-            text-align: left;
-            min-height: 2.5em;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+        }
+        ol{
+            margin: auto 0em;
+            padding: 0px;
         }
     </style>
 </head>
 <body>
-    <h>Hello, you are {{ .Name }}!</h>
+    <p>Hello, you are <b>{{.Name}}!</b></p>
     <form method="POST" style="margin: 1em auto;">
         <div>
             YouTube Link:<br>
             <input  type="url"
                     name="ytlink"
-                    style="min-width: 10em; width: 66%;"
+                    style="min-width: 10em; width: 100%; padding: 2px; height: 2em; max-width: 600px;"
                     autofocus
                     maxlength="100"
                     placeholder="f.e. https://www.youtube.com/watch?v=hHW1oY26kxQ"
                     required>
         </div>
-        <button type="submit" style="margin-top: 0.5em;  position: relative; display: flex; justify-content: center; align-items: center;">
+        <button type="submit" title="Add YT-Link to Playlist" style="padding: 0.75em; margin: 1em 0em;  position: relative; display: flex; justify-content: center; align-items: center; background-color: #4CAF50; border: none; color: white; text-align: center; text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" style="margin-right: 0.25em;">
-                <path d="M0 0h24v24H0z" fill="none"/>
-                <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/>
+                <path d="M0 0h24v24H0z" fill="None"/>
+                <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" fill="white"/>
             </svg>
             Add To Playlist
         </button>
     </form>
 
-    <div>
-        Playlist:
+    {{ if gt (len .Songs) 0 }}
+        <span style="color: #ff4000">Currently Playing:</span>
+        <br>
+        <div style="box-shadow: 2px 6px 8px 2px rgba(0, 0, 0, 0.2), 4px 10px 16px 4px rgba(0, 0, 0, 0.19); display: inline-block; background-color: whitesmoke;">    
+                {{ with index .Songs 0 }}  
+                    <div style="font-size: 1.1em; margin: auto 1em;"><b>{{.SongName}}</b></div>
+                    <div style="font-size: 1em; margin: auto 1em;"><small>{{.UserName}}</small></div>     
+                {{ end }}
+        </div>
+    
+    <div style="margin-top: 2em;">
+        <span style="color: #4CAF50;">Upcomming:</span>
         <form method="POST" action="/upvote">
         <ol>
             {{range $ID, $ELEM := .Songs}}
-            <li id="{{$ID}}" style="position: relative;">
-                <div style="font-size: 1.2em; margin: auto 1% auto 1%; text-align: left;">{{ $.GetRealID $ID}}</div>
-                <div style="font-size: 1.2em; text-align: left;">{{.SongName}}</div>
-                <div style="font-size: 1em; margin: auto 1% auto auto; text-align: right;"><small>{{.UserName}}</small></div>
-                <button name="id" value="{{$ID}}" style="margin: 1em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" style="margin: 1em; min-width: 32px; min-height: 32px; width: 1.5em; height: 1.5em; fill: green; " height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/><path d="M9 21h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2zM9 9l4.34-4.34L12 10h9v2l-3 7H9V9zM1 9h4v12H1z"/></svg>
-                </button>
-                
+            {{ if gt $ID 0}}
+            <li id="{{$ID}}">
+                <div style="font-size: medium; margin: auto 2% auto 1%;">{{$ID}}</div>                
+                <div style="font-size: medium; margin: auto 1%;">{{.SongName}}</div>
+                <div style="font-size: small; margin: auto 0.2em auto auto;">{{.UserName}}</div>
+
+                {{ if $.IsSongUpvotedByUser $ID}}
+                    <div style="    -moz-box-sizing: content-box;
+                                    -webkit-box-sizing: content-box;
+                                    box-sizing: content-box;
+                                    width: 4%;
+                                    position: relative;
+                                    display: flex;
+                                    justify-content: center;
+                                    border: 0px;
+                                    padding: 0;
+                                    min-width: 32px;
+                                    background-color: white;">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="height: auto; width: 100%; min-width: 32px; min-height: 32px;" viewBox="0 0 24 24">
+                            <path d="M0 0h24v24H0z" fill="None"/>
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#333333"/>
+                            <path d="M0 0h24v24H0z" fill="none"/>
+                        </svg>
+                        <div style="color: white; height: 100%; width: 100%; font-size: small; position: absolute; margin: auto; text-align: center; justify-content: center; display: flex; justify-content: center; align-items: center;"><small>{{.GetUpvotesCount}}</small></div>
+                    </div>
+                {{ else }}
+                    <button class="coloumn"
+                            name="id"
+                            value="{{$ID}}"
+                            style=" -moz-box-sizing: content-box;
+                                    -webkit-box-sizing: content-box;
+                                    box-sizing: content-box;
+                                    width: 4%;
+                                    position: relative;
+                                    display: flex;
+                                    justify-content: center;
+                                    border: 0px;
+                                    padding: 0;
+                                    background-color: white;
+                                    min-width: 32px;
+                                    margin-right: auto 0.5em;">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="height: auto; width: 100%; min-width: 32px; min-height: 32px;" viewBox="0 0 24 24">
+                            <path fill="#333333" d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/>
+                            <path d="M0 0h24v24H0z" fill="none"/>
+                        </svg>
+                        <div style="height: 100%; width: 100%; font-size: small; position: absolute; margin: auto; text-align: center; justify-content: center; display: flex; justify-content: center; align-items: center;"><small>{{.GetUpvotesCount}}</small></div>
+                    </button>
+                {{ end }}
             </li>
+            {{end}}
             {{end}}
         </ol>
     </form>
     </div>
+    {{end}}
 </body>
 </html>
-
