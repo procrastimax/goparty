@@ -177,7 +177,7 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 
 	//weird that the output format get strangely parsed... "-osongs/"" should be "-o songs/""
 	//audio quality 0=best, 9=worst, default=5
-	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--audio-quality=7", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s:_____:%(id)s.%(ext)s", song.url)
+	cmd := exec.Command(youtubeDlDir, "-i", "--flat-playlist", "--no-playlist", "--extract-audio", "--audio-quality=7", "--youtube-skip-dash-manifest", "--audio-format=mp3", "-o"+downloadDir+"/%(title)s#____#%(id)s.%(ext)s", song.url)
 	var stderr bytes.Buffer
 
 	if verbose {

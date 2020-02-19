@@ -71,7 +71,7 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	// we need to resample the song sample rate to the speaker sample rate
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
-	songName := strings.Split(strings.Trim(filename, ".mp3"), ":_____:")[0]
+	songName := strings.Split(strings.Trim(filename, ".mp3"), "#____#")[0]
 	queue.Add(songName, userIP, resampledStreamer)
 
 	speaker.Unlock()
