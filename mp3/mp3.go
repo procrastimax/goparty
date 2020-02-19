@@ -4,6 +4,7 @@ package mp3
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -19,6 +20,8 @@ const (
 
 var (
 	queue MusicQueue
+	//parenthesisRegex matches everything in brackets (),[],{},<> including the brackets
+	parenthesisRegex = regexp.MustCompile("(\\(.*\\)|\\[.*\\]|\\{.*\\}|\\<.*\\>)")
 )
 
 //CloseSpeaker closes the speaker
@@ -72,6 +75,7 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
 	songName := strings.Split(strings.Trim(filename, ".mp3"), "#____#")[0]
+	songName = parenthesisRegex.ReplaceAllString(songName, "")
 	queue.Add(songName, userIP, resampledStreamer)
 
 	speaker.Unlock()
