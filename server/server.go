@@ -17,32 +17,40 @@ import (
 )
 
 var (
-	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html"))
+	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html", "html/songdb.html"))
 	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
 	validYoutubeLink = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
-	uidata           uiData
+	serverIP         string
 )
 
 type userIP string
 
-type errorMessage struct {
+type errorUI struct {
 	ErrorMsg string
 }
 
-type uiData struct {
+type queueUI struct {
 	Name    string
 	IP      string
 	AdminIP string
 	Songs   []mp3.Song
 }
 
-func (ui uiData) IsSongUpvotedByUser(songID int) bool {
+func (ui queueUI) IsSongUpvotedByUser(songID int) bool {
 	for _, elem := range ui.Songs[songID].GetUpvotes() {
 		if elem == ui.IP {
 			return true
 		}
 	}
 	return false
+}
+
+type songdbUI struct {
+	Songs []string
+}
+
+func (db songdbUI) IncreaseID(id int) int {
+	return id + 1
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -53,6 +61,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
+	var uidata queueUI
 	var ip userIP
 	//convert localhost ipv6 resolution to an ipv4 address
 	if strings.Contains(r.RemoteAddr, "::1") {
@@ -65,6 +74,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	uidata.Name = user.GetUserNameToIP(ip.String())
 	uidata.Songs = mp3.GetCurrentPlaylist()
 	uidata.IP = ip.String()
+	uidata.AdminIP = serverIP
 
 	if i := r.FormValue("task"); len(i) != 0 {
 		handleAdminTasks(i)
@@ -85,37 +95,13 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 			//we need to wait here shortly, so the website can update
 			time.Sleep(150 * time.Millisecond)
 			http.Redirect(w, r, "/", http.StatusFound)
+		} else if len(link) == 0 {
+			http.Error(w, "500 - Unvalid POST Request", http.StatusInternalServerError)
 		} else {
-			renderTemplate(w, "error", errorMessage{ErrorMsg: "You entered an unvalid Youtube-Link!"})
+			renderTemplate(w, "error", errorUI{ErrorMsg: "You entered an unvalid Youtube-Link!"})
 		}
 	} else {
 		fmt.Fprintf(w, "Only GET and POST methods are supported!")
-	}
-}
-
-func upvoteHandler(w http.ResponseWriter, r *http.Request) {
-	var ip userIP
-
-	//convert localhost ipv6 resolution to an ipv4 address
-	if strings.Contains(r.RemoteAddr, "::1") {
-		ip = "127.0.0.1"
-	} else {
-		ip = userIP(r.RemoteAddr)
-		ip = ip.normalizeIP()
-	}
-
-	if r.Method == "POST" {
-		idStr := r.FormValue("id")
-
-		id, err := strconv.Atoi(idStr)
-
-		if err != nil {
-			fmt.Printf("upvoteHandler: could not convert upvoted song id to int %s", err)
-		}
-		mp3.UpvoteSong(id, ip.String())
-		http.Redirect(w, r, "/", http.StatusFound)
-	} else {
-		fmt.Fprintf(w, "Only POST methods are supported!")
 	}
 }
 
@@ -135,17 +121,80 @@ func handleAdminTasks(task string) {
 	}
 }
 
+func upvoteHandler(w http.ResponseWriter, r *http.Request) {
+	var ip userIP
+	//convert localhost ipv6 resolution to an ipv4 address
+	if strings.Contains(r.RemoteAddr, "::1") {
+		ip = "127.0.0.1"
+	} else {
+		ip = userIP(r.RemoteAddr)
+		ip = ip.normalizeIP()
+	}
+
+	if r.Method == "POST" {
+		idStr := r.FormValue("id")
+
+		id, err := strconv.Atoi(idStr)
+
+		if err != nil {
+			fmt.Printf("upvoteHandler: could not convert upvoted song id to int %s", err)
+		}
+		mp3.UpvoteSong(id, ip.String())
+		http.Redirect(w, r, "/", http.StatusFound)
+	} else {
+		fmt.Fprintf(w, "Only POST methods are supported for /upvote!")
+	}
+}
+
+func songDBHandler(w http.ResponseWriter, r *http.Request) {
+	var ip userIP
+	//convert localhost ipv6 resolution to an ipv4 address
+	if strings.Contains(r.RemoteAddr, "::1") {
+		ip = "127.0.0.1"
+	} else {
+		ip = userIP(r.RemoteAddr)
+		ip = ip.normalizeIP()
+	}
+
+	if r.Method == "GET" {
+		var dbui songdbUI
+		dbui.Songs = mp3.GetSortedSongNameList()
+		renderTemplate(w, "songdb", dbui)
+
+	} else if r.Method == "POST" {
+
+		songname := r.FormValue("offlineSongBtn")
+
+		if mp3.CheckSongInDB(songname) {
+			fmt.Println("Song exists!")
+			filedir, filename := mp3.GetFileDirAndFileName(songname)
+
+			err := mp3.AddMP3ToMusicQueue(filedir, filename, ip.String())
+
+			if err != nil {
+				renderTemplate(w, "error", errorUI{ErrorMsg: "Could not add offline song: " + err.Error()})
+				return
+			}
+
+			r.Method = "GET"
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+			renderTemplate(w, "error", errorUI{ErrorMsg: "Could not find song in SongDB :("})
+			return
+		}
+	}
+}
+
 //SetupServing sets up all we need to handle our "website"
 func SetupServing() {
+	mp3.InitializeSongDBFromMemory("songs/")
 
 	err := user.InitUserNames("usernames.txt")
 	if err != nil {
 		log.Println(err)
 	}
 
-	serverIP := getLocalServerAdress()
-
-	uidata.AdminIP = serverIP
+	serverIP = getLocalServerAdress()
 
 	//check for youtube-dl binary in $PATH
 	youtube.MustExistYoutubeDL()
@@ -155,6 +204,7 @@ func SetupServing() {
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
 	serverMux.HandleFunc("/upvote", upvoteHandler)
+	serverMux.HandleFunc("/songdb", songDBHandler)
 
 	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
 

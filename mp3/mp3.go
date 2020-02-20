@@ -20,8 +20,8 @@ const (
 
 var (
 	queue MusicQueue
-	//parenthesisRegex matches everything in brackets (),[],{},<> including the brackets
-	parenthesisRegex = regexp.MustCompile("(\\(.*\\)|\\[.*\\]|\\{.*\\}|\\<.*\\>)")
+	//ParenthesisRegex matches everything in brackets (),[],{},<> including the brackets
+	ParenthesisRegex = regexp.MustCompile("(\\(.*\\)|\\[.*\\]|\\{.*\\}|\\<.*\\>)")
 )
 
 //CloseSpeaker closes the speaker
@@ -63,11 +63,11 @@ func InitSpeaker() error {
 }
 
 //AddMP3ToMusicQueue adds a mp3 stream to the running music queue
+//the function differentiates between already downloaded/ offline songs and ones which got downloaded by youtube-dl
 func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	streamer, format, err := loadMp3File(songDir + filename)
 
 	if err != nil {
-		fmt.Println("error")
 		return fmt.Errorf("load mp3: %v", err)
 	}
 
@@ -75,8 +75,17 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	resampledStreamer := beep.Resample(3, format.SampleRate, SampleRate, *streamer)
 	speaker.Lock()
 	songName := strings.Split(strings.Trim(filename, ".mp3"), "#____#")[0]
-	songName = parenthesisRegex.ReplaceAllString(songName, "")
+	songName = ParenthesisRegex.ReplaceAllString(songName, "")
 	queue.Add(songName, userIP, resampledStreamer)
+
+	if CheckSongInDB(filename) == false {
+		//check if the songdir really ends with a slash seperator
+		if strings.HasSuffix(songDir, "/") {
+			AddSongToDB(songName, songDir+filename)
+		} else {
+			AddSongToDB(songName, songDir+"/"+filename)
+		}
+	}
 
 	speaker.Unlock()
 	fmt.Printf("Added song to queue: %s\n", songName)
@@ -100,7 +109,7 @@ func loadMp3File(filename string) (*beep.StreamSeekCloser, *beep.Format, error) 
 		return nil, nil, fmt.Errorf("File %s is not a valid mp3 name", filename)
 	}
 
-	//check if really an mp3
+	//check if file really is an mp3
 	if filename[len(filename)-4:] != ".mp3" {
 		return nil, nil, fmt.Errorf("File %s is not a mp3", filename)
 	}

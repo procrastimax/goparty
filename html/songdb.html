@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="60">
+    <meta http-equiv="Content-Language" content="en">
+    <title>GoParty - Song Database</title>
+    <style>
+        body{
+            margin: 1em auto;
+            max-width: 90%;
+            font: 1.2em/1.62 sans-serif;
+            background-color: #fefefe;
+        }
+        button:hover {
+            background-image:none !important;
+            background-color:rgb(0, 102, 204) !important;
+            box-shadow: 0px 4px 6px 0px rgba(0, 0, 0, 0.2), 0px 6px 8px 0px rgba(0, 0, 0, 0.19);
+            text-align: center;
+        }
+
+        button {
+            margin-left: 1em;
+            display: block;
+            margin-bottom: 0.5em;
+            background-color: #3399FF;
+            border: none;
+            color: white;
+            padding: 15px 24px;
+            text-align: left;
+            text-decoration: none;
+            font-size: 0.9em;
+            min-width: 40%;
+        }
+    </style>
+</head>
+<body>
+    <p>Select an already downloaded song for the playlist:</p>
+
+    <form method="POST" action="/songdb">
+        {{ range $ID, $ELEM := .Songs}}
+
+        <button type="submit" name="offlineSongBtn" value="{{$ELEM}}">
+           {{$.IncreaseID $ID }}&emsp;{{$ELEM}}
+        </button>
+
+        {{ end }}
+
+    </form>
+
+</body>
+</html>
