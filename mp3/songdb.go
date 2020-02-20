@@ -2,8 +2,10 @@ package mp3
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -72,6 +74,54 @@ func AddSongToDB(songname, songpath string) {
 func CheckSongInDB(songname string) bool {
 	_, ok := songDB[songname]
 	return ok
+}
+
+//CheckYTSongInDB checks whether or not a given song downloaded by youtubedl is in the map
+//it returns the matching filename if found
+func CheckYTSongInDB(ytURL string) (string, error) {
+	var videoIDStr string
+
+	//we got a youtube shortform url
+	isMatch, err := regexp.MatchString("https{0,1}://youtu\\.be/\\S*", ytURL)
+
+	if err != nil {
+		log.Fatalln("Regex for checking url against http://youtu.be/ link is invalid!")
+	}
+
+	if isMatch {
+		strArr := strings.Split(ytURL, "/")
+		if len(strArr) != 4 {
+			return "", fmt.Errorf("provided youtube link has not supported format https://youtu.be/ID - %s", ytURL)
+		}
+
+		if strings.ContainsAny(strArr[3], "?") {
+			videoIDStr = strings.Split(strArr[3], "?")[0]
+		} else {
+			videoIDStr = strArr[3]
+		}
+
+	} else {
+		strArr := strings.Split(ytURL, "v=")
+		if len(strArr) != 2 {
+			return "", fmt.Errorf("provided youtube link has not supported format (?v=ID) - %s", ytURL)
+		}
+
+		if strings.ContainsAny(strArr[1], "&") {
+			videoIDStr = strings.Split(strArr[1], "&")[0]
+		} else {
+			videoIDStr = strArr[1]
+		}
+	}
+
+	for k, v := range songDB {
+		if strings.Contains(v, videoIDStr) {
+			_, filename := GetFileDirAndFileName(k)
+			return filename, nil
+		}
+	}
+
+	//could not find the youtube song in the songdb
+	return "", nil
 }
 
 //GetSongPath returns the path of a given song and the information whether or not the song exists in the db

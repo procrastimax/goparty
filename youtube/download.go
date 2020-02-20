@@ -190,15 +190,15 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 		return fmt.Errorf("%s", errStr)
 	}
 
-	existsFilename, err := checkFileExist(song.url)
+	filename, err := checkFileExist(song.url)
 
 	if err != nil {
 		return fmt.Errorf("checkFileExist: %s", err)
 	}
 
 	// when the file already we dont need to download it
-	if len(existsFilename) != 0 {
-		err = callbackMP3Add(downloadDir, existsFilename, song.UserIP)
+	if len(filename) > 0 {
+		err = callbackMP3Add(downloadDir, filename, song.UserIP)
 		if err != nil {
 			return fmt.Errorf("callbackMP3Add: %s", err)
 		}
