@@ -74,7 +74,7 @@ func Add(url string, userIP string) {
 		//insert the song in the queue, at this position, where the addedCount of a user increases
 		startValue := user.GetUserAddedSongs(userIP).DownloadingSongs
 		for i, val := range queue.songs {
-			if val.SongCount != startValue {
+			if val.SongCount > startValue {
 				//Insert element at position 'i'
 				queue.songs = append(queue.songs, queue.songs[len(queue.songs)-1])
 				copy(queue.songs[i+1:], queue.songs[i:len(queue.songs)-1])
@@ -87,10 +87,11 @@ func Add(url string, userIP string) {
 			}
 		}
 	}
-
 	if len(queue.songs) == 1 {
+		//directly start downloading song
 		jobCh <- song
 	}
+
 	queue.Unlock()
 }
 
@@ -111,8 +112,8 @@ func done(userIP string) {
 			}
 		}
 	}
-
 	queue.songs = queue.songs[1:]
+
 	if len(queue.songs) != 0 {
 		jobCh <- queue.songs[0]
 	}

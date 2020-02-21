@@ -91,6 +91,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		link := r.FormValue("ytlink")
 		if validYoutubeLink.MatchString(link) {
+			fmt.Println("added: " + link)
 			youtube.Add(link, ip.String())
 			//we need to wait here shortly, so the website can update
 			time.Sleep(150 * time.Millisecond)
