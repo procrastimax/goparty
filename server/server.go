@@ -94,6 +94,8 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 			youtube.Add(link, ip.String())
 			//we need to wait here shortly, so the website can update
 			time.Sleep(150 * time.Millisecond)
+
+			r.Method = "GET"
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else if len(link) == 0 {
 			http.Error(w, "500 - Unvalid POST Request", http.StatusInternalServerError)
