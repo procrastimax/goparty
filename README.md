@@ -1,7 +1,7 @@
 # goparty - the youtube music queue software
 
 ## TODO
-- possibility to select from already downloaded songs
+- configuration management
 
 ## Uses libraries & Binaries
 - beep library -> https://github.com/faiface/beep
