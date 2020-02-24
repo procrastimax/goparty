@@ -13,14 +13,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
-	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html", "html/songdb.html"))
-	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
-	validYoutubeLink = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
-	serverIP         string
+	templates         = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html", "html/songdb.html"))
+	validPath         = regexp.MustCompile("^/(start|skip|pause|stop)")
+	validYoutubeLink  = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
+	serverIP          string
+	songDirectory     string = "songs/"
+	downloadDirectory string = "songs/yt/"
 )
 
 type userIP string
@@ -51,6 +52,13 @@ type songdbUI struct {
 
 func (db songdbUI) IncreaseID(id int) int {
 	return id + 1
+}
+
+func (db songdbUI) IsDirectory(path string) bool {
+	if path[len(path)-1] == '/' {
+		return true
+	}
+	return false
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -93,8 +101,6 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		if validYoutubeLink.MatchString(link) {
 			fmt.Println("added: " + link)
 			youtube.Add(link, ip.String())
-			//we need to wait here shortly, so the website can update
-			time.Sleep(150 * time.Millisecond)
 
 			r.Method = "GET"
 			http.Redirect(w, r, "/", http.StatusFound)
@@ -161,7 +167,7 @@ func songDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" {
 		var dbui songdbUI
-		dbui.Songs = mp3.GetSortedSongNameList()
+		dbui.Songs = mp3.GetSortedSongList()
 		renderTemplate(w, "songdb", dbui)
 
 	} else if r.Method == "POST" {
@@ -170,9 +176,9 @@ func songDBHandler(w http.ResponseWriter, r *http.Request) {
 
 		if mp3.CheckSongInDB(songname) {
 			fmt.Println("Song exists!")
-			filedir, filename := mp3.GetFileDirAndFileName(songname)
+			filedir, complSongname := mp3.GetSongDirAndCompleteName(songname)
 
-			err := mp3.AddMP3ToMusicQueue(filedir, filename, ip.String())
+			err := mp3.AddMP3ToMusicQueue(filedir, complSongname, ip.String())
 
 			if err != nil {
 				renderTemplate(w, "error", errorUI{ErrorMsg: "Could not add offline song: " + err.Error()})
@@ -190,7 +196,7 @@ func songDBHandler(w http.ResponseWriter, r *http.Request) {
 
 //SetupServing sets up all we need to handle our "website"
 func SetupServing() {
-	mp3.InitializeSongDBFromMemory("songs/")
+	mp3.InitializeSongDBFromMemory(songDirectory, downloadDirectory)
 
 	err := user.InitUserNames("usernames.txt")
 	if err != nil {
@@ -209,7 +215,7 @@ func SetupServing() {
 	serverMux.HandleFunc("/upvote", upvoteHandler)
 	serverMux.HandleFunc("/songdb", songDBHandler)
 
-	youtube.StartDownloadWorker(mp3.AddMP3ToMusicQueue)
+	youtube.StartDownloadWorker(downloadDirectory, mp3.AddMP3ToMusicQueue)
 
 	log.Fatal(http.ListenAndServe(":8080", serverMux))
 }

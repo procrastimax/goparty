@@ -29,12 +29,11 @@ import (
 )
 
 var (
-	downloadDir  = "songs/"
-	youtubeDlDir = ""
 	isVerbose    = false
 	jobCh        = make(chan downloadEntity, 2)
 	quitCh       = make(chan bool)
 	queue        downloadQueue
+	youtubeDlDir string
 )
 
 type downloadEntity struct {
@@ -130,7 +129,7 @@ func MustExistYoutubeDL() {
 }
 
 //StartDownloadWorker starts downlading
-func StartDownloadWorker(mp3AddCallback func(dataDir, filename, userIP string) error) {
+func StartDownloadWorker(downloadDir string, mp3AddCallback func(dataDir, filename, userIP string) error) {
 	fmt.Println("Started YT-Download Worker!")
 	var err error
 	var existsFilename string
@@ -142,10 +141,10 @@ func StartDownloadWorker(mp3AddCallback func(dataDir, filename, userIP string) e
 				return
 
 			case job := <-jobCh:
-				existsFilename, err = checkFileExist(job.url)
+				existsFilename, err = checkFileExist(downloadDir, job.url)
 
 				if err != nil {
-					log.Fatalln(err)
+					log.Fatalln("StartDowloadWorker:", err)
 				}
 
 				// when the file already we dont need to download it
@@ -191,7 +190,7 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 		return fmt.Errorf("%s", errStr)
 	}
 
-	filename, err := checkFileExist(song.url)
+	filename, err := checkFileExist(downloadDir, song.url)
 
 	if err != nil {
 		return fmt.Errorf("checkFileExist: %s", err)
@@ -209,8 +208,22 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 }
 
 //checkFileExist takes a youtube url and looks for a file with the youtube video ID, if it exists, the filename is returned
-func checkFileExist(youtubeURL string) (string, error) {
-	files, err := ioutil.ReadDir(downloadDir)
+func checkFileExist(dowloadDir, youtubeURL string) (string, error) {
+	//
+	// we cant really exchange this function with the mp3.CheckYT.. function, because we have to track the filename here for the first time
+	//
+
+	var err error
+	//first check if directory for downloading exists
+	if _, err = os.Stat(dowloadDir); os.IsNotExist(err) {
+		//does not exist, create directory
+		err = os.MkdirAll(dowloadDir, os.ModePerm)
+		if err == nil {
+			log.Println("Successfully created download dir")
+		}
+	}
+
+	files, err := ioutil.ReadDir(dowloadDir)
 	if err != nil {
 		return "", err
 	}
