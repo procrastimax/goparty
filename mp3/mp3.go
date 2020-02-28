@@ -64,7 +64,7 @@ func InitSpeaker() error {
 
 //AddMP3ToMusicQueue adds a mp3 stream to the running music queue
 //the function differentiates between already downloaded/ offline songs and ones which got downloaded by youtube-dl
-func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
+func AddMP3ToMusicQueue(songDir, filename, userIP string, newSong bool) error {
 	streamer, format, err := loadMp3File(songDir + filename)
 	if err != nil {
 		return fmt.Errorf("load mp3: %v", err)
@@ -77,13 +77,8 @@ func AddMP3ToMusicQueue(songDir, filename, userIP string) error {
 	songName = ParenthesisRegex.ReplaceAllString(songName, "")
 	queue.Add(songName, userIP, resampledStreamer)
 
-	if CheckSongInDB(filename) == false {
-		//check if the songdir really ends with a slash seperator
-		if strings.HasSuffix(songDir, "/") {
-			AddSongToDB(songDir, filename)
-		} else {
-			AddSongToDB(songDir, filename)
-		}
+	if newSong {
+		AddSongToDB(songDir, filename)
 	}
 
 	speaker.Unlock()

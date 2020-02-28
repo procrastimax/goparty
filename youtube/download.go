@@ -129,7 +129,7 @@ func MustExistYoutubeDL() {
 }
 
 //StartDownloadWorker starts downlading
-func StartDownloadWorker(downloadDir string, mp3AddCallback func(dataDir, filename, userIP string) error) {
+func StartDownloadWorker(downloadDir string, mp3AddCallback func(dataDir, filename, userIP string, newSong bool) error) {
 	fmt.Println("Started YT-Download Worker!")
 	var err error
 	var existsFilename string
@@ -150,7 +150,7 @@ func StartDownloadWorker(downloadDir string, mp3AddCallback func(dataDir, filena
 				// when the file already we dont need to download it
 				if len(existsFilename) != 0 {
 					fmt.Println("Song already exists, not downloading again.")
-					err = mp3AddCallback(downloadDir, existsFilename, job.UserIP)
+					err = mp3AddCallback(downloadDir, existsFilename, job.UserIP, false)
 					if err != nil {
 						log.Fatalln(err)
 					}
@@ -168,7 +168,7 @@ func StartDownloadWorker(downloadDir string, mp3AddCallback func(dataDir, filena
 }
 
 //downloadYoutubeVideoAsMP3 downloads a youtube video in mp3 format
-func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose bool, callbackDone func(userIP string), callbackMP3Add func(songDir, filename, userIP string) error) error {
+func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose bool, callbackDone func(userIP string), callbackMP3Add func(songDir, filename, userIP string, newSong bool) error) error {
 	if len(youtubeDlDir) == 0 {
 		panic("youtube-dl directory variable was not set previously!")
 	}
@@ -196,9 +196,9 @@ func downloadYoutubeVideoAsMP3(song *downloadEntity, downloadDir string, verbose
 		return fmt.Errorf("checkFileExist: %s", err)
 	}
 
-	// when the file already we dont need to download it
 	if len(filename) > 0 {
-		err = callbackMP3Add(downloadDir, filename, song.UserIP)
+		// we add a newly downloaded song here
+		err = callbackMP3Add(downloadDir, filename, song.UserIP, true)
 		if err != nil {
 			return fmt.Errorf("callbackMP3Add: %s", err)
 		}

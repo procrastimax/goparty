@@ -180,7 +180,7 @@ func songDBHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Song exists!")
 			filedir, complSongname := mp3.GetSongDirAndCompleteName(songname)
 
-			err := mp3.AddMP3ToMusicQueue(filedir, complSongname, ip.String())
+			err := mp3.AddMP3ToMusicQueue(filedir, complSongname, ip.String(), false)
 
 			if err != nil {
 				renderTemplate(w, "error", errorUI{ErrorMsg: "Could not add offline song: " + err.Error()})

@@ -147,7 +147,6 @@ func CheckYTSongInDB(ytURL string, downloadDir string) (string, error) {
 
 	for _, song := range songs {
 		if strings.Contains(song, videoIDStr) {
-			log.Println("found: ", song)
 			return song, nil
 		}
 	}
@@ -203,8 +202,7 @@ func GetSortedSongList() []string {
 			if strings.Contains(songName, "#____#") {
 				songName = strings.Split(songName, "#____#")[0]
 			}
-			//remove brackets
-			songName = ParenthesisRegex.ReplaceAllString(songName, "")
+
 			songs = append(songs, songName)
 		}
 	}
