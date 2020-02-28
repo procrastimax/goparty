@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bufio"
 	"fmt"
 	"goparty/mp3"
 	"goparty/user"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -219,6 +221,9 @@ func SetupServing() {
 
 	youtube.StartDownloadWorker(downloadDirectory, mp3.AddMP3ToMusicQueue)
 
+	fmt.Println(createWelcomeMessage(serverIP))
+	go handleUserInput()
+
 	log.Fatal(http.ListenAndServe(":8080", serverMux))
 }
 
@@ -285,4 +290,65 @@ func (ip userIP) isIPv4() bool {
 		return false
 	}
 	return true
+}
+
+func createWelcomeMessage(ip string) string {
+	builder := strings.Builder{}
+	builder.WriteString("\n-------------------------------------\n")
+	builder.WriteString("GOPARTY - The Youtube Music Queue\n")
+	builder.WriteString("-------------------------------------\n\n")
+	builder.WriteString("Hello you are the admin!\n")
+	builder.WriteString("Your local IP is: ")
+	builder.WriteString(ip)
+	builder.WriteString("\n\n")
+	builder.WriteString("You can enter the following commands:\n")
+	builder.WriteString("- help (shows this text)\n")
+	builder.WriteString("- play (starts paused music)\n")
+	builder.WriteString("- pause (pauses the music)\n")
+	builder.WriteString("- skip (skips the current playing song)\n")
+	builder.WriteString("- list (lists all current songs in the playing queue)\n")
+	builder.WriteString("- exit/quit (quits the program)\n")
+
+	return builder.String()
+}
+
+func handleUserInput() error {
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("> ")
+		ok := scanner.Scan()
+		switch scanner.Text() {
+		case "play":
+			mp3.StartSpeaker()
+		case "pause":
+			mp3.PauseSpeaker()
+		case "skip":
+			mp3.SkipSong()
+		case "list":
+			fmt.Println()
+			for _, song := range mp3.GetCurrentPlaylist() {
+				fmt.Println(" - " + song.SongName + "\tby: " + song.UserName + " (" + song.UserIP + ")\tupvotes: " + strconv.Itoa(song.GetUpvotesCount()))
+			}
+			fmt.Println()
+		case "help":
+			fmt.Println(createWelcomeMessage(serverIP))
+		case "exit", "quit", "q":
+			fmt.Println("Quitting the program...")
+			os.Exit(0)
+		default:
+			if len(scanner.Text()) > 0 {
+				fmt.Println("unknown command!")
+			}
+		}
+
+		if scanner.Err() != nil {
+			return fmt.Errorf("handleUserInput: %s", scanner.Err().Error())
+		}
+
+		if ok == false {
+			log.Println("Stopping listening to user input")
+			break
+		}
+	}
+	return nil
 }
