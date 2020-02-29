@@ -2,12 +2,21 @@ package mp3
 
 import (
 	"fmt"
-	"goparty/user"
+	"goparty/clients"
 	"strings"
 	"sync"
 
 	"github.com/faiface/beep"
 )
+
+var (
+	neededUpvoteCount = 1
+)
+
+//SetNeededUpvoteCount sets the number of upvotes needed for a song to consider a reranking of the queue
+func SetNeededUpvoteCount(upvoteCount int) {
+	neededUpvoteCount = upvoteCount
+}
 
 //The code for this queue comes from the beep tutorial: https://github.com/faiface/beep/wiki/Making-own-streamers
 
@@ -49,7 +58,7 @@ func (s *Song) GetUpvotesCount() int {
 }
 
 func (s Song) String() string {
-	return fmt.Sprintf("%s - %s -> %s : %d", s.SongName, *getOnlyIP(&s.UserIP), user.GetUserName(s.UserIP), s.SongCount)
+	return fmt.Sprintf("%s - %s -> %s : %d", s.SongName, *getOnlyIP(&s.UserIP), clients.GetUserName(s.UserIP), s.SongCount)
 }
 
 func getOnlyIP(ip *string) *string {
@@ -87,13 +96,13 @@ func (q *MusicQueue) GetSongs() []Song {
 //Add adds a new entry to the musicqueue
 func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) {
 	q.Lock()
-	user.AddSongPlaylist(userIP)
+	clients.AddSongPlaylist(userIP)
 
 	songStream := songStream{
 		Song{SongName: songame,
-			SongCount: user.GetUserAddedSongs(userIP).PlaylistSongs,
+			SongCount: clients.GetUserAddedSongs(userIP).PlaylistSongs,
 			UserIP:    userIP,
-			UserName:  user.GetUserName(userIP)},
+			UserName:  clients.GetUserName(userIP)},
 		&streamer,
 	}
 
@@ -101,7 +110,7 @@ func (q *MusicQueue) Add(songame string, userIP string, streamer beep.Streamer) 
 	if len(q.songs) <= 1 {
 		q.songs = append(q.songs, songStream)
 	} else {
-		startValue := user.GetUserAddedSongs(userIP).PlaylistSongs
+		startValue := clients.GetUserAddedSongs(userIP).PlaylistSongs
 		for i, val := range q.songs {
 			if val.SongCount > startValue {
 				//when the following song has more upvotes, then skip it
@@ -133,8 +142,8 @@ func (q *MusicQueue) UpvoteSong(songID int, userIP string) {
 	//after upvoting the song we want to decrease the added count, so the song moves forward in the queue
 	//therefore we need to check the element before the upvoted song
 
-	//check if song is already first element or 2nd, if this is the case then do nothing
-	if songID <= 1 {
+	//check if song is already first element or 2nd, if this is the case then do nothing. Also when the upvote count of the song is less than the needed upvote count, then also just return
+	if songID <= 1 || q.songs[songID].GetUpvotesCount() < neededUpvoteCount {
 		return
 	}
 
@@ -174,7 +183,7 @@ func (q *MusicQueue) Done() {
 	q.Lock()
 	if len(q.songs) > 0 {
 		userIP := q.songs[0].UserIP
-		user.SongDonePlaying(userIP)
+		clients.SongDonePlaying(userIP)
 		q.songs = q.songs[1:]
 		q.currIdx++
 		//we need to iterate over the complete queue, and decrease the count of the user added songs

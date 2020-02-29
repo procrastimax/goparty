@@ -17,8 +17,8 @@ package youtube
 import (
 	"bytes"
 	"fmt"
+	"goparty/clients"
 	"goparty/mp3"
-	"goparty/user"
 	"io/ioutil"
 	"log"
 	"os"
@@ -55,7 +55,7 @@ type downloadQueue struct {
 func Add(url string, userIP string) {
 	queue.Lock()
 
-	user.AddSongDownload(userIP)
+	clients.AddSongDownload(userIP)
 
 	//cleaning URL
 	if strings.ContainsAny(url, "&") {
@@ -63,7 +63,7 @@ func Add(url string, userIP string) {
 	}
 
 	song := downloadEntity{
-		mp3.Song{UserIP: userIP, SongCount: user.GetUserAddedSongs(userIP).DownloadingSongs},
+		mp3.Song{UserIP: userIP, SongCount: clients.GetUserAddedSongs(userIP).DownloadingSongs},
 		url,
 	}
 
@@ -71,7 +71,7 @@ func Add(url string, userIP string) {
 		queue.songs = append(queue.songs, song)
 	} else {
 		//insert the song in the queue, at this position, where the addedCount of a user increases
-		startValue := user.GetUserAddedSongs(userIP).DownloadingSongs
+		startValue := clients.GetUserAddedSongs(userIP).DownloadingSongs
 		for i, val := range queue.songs {
 			if val.SongCount > startValue {
 				//Insert element at position 'i'
@@ -102,7 +102,7 @@ func ExitDownloadWorker() {
 //done removes the first element of the queue when done, also decreases the addedcount of the user by 1 for all added songs
 func done(userIP string) {
 	queue.Lock()
-	user.SongDoneDownloading(userIP)
+	clients.SongDoneDownloading(userIP)
 
 	for i, val := range queue.songs {
 		if val.UserIP == userIP {

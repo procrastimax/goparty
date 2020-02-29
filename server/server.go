@@ -4,8 +4,8 @@ package server
 import (
 	"bufio"
 	"fmt"
+	"goparty/clients"
 	"goparty/mp3"
-	"goparty/user"
 	"goparty/youtube"
 	"html/template"
 	"log"
@@ -18,12 +18,14 @@ import (
 )
 
 var (
-	templates         = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html", "html/songdb.html"))
-	validPath         = regexp.MustCompile("^/(start|skip|pause|stop)")
-	validYoutubeLink  = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
-	serverIP          string
-	songDirectory     string = "songs/"
-	downloadDirectory string = "songs/yt/"
+	templates        = template.Must(template.ParseFiles("html/user.html", "html/admin.html", "html/error.html", "html/songdb.html"))
+	validPath        = regexp.MustCompile("^/(start|skip|pause|stop)")
+	validYoutubeLink = regexp.MustCompile("(https{0,1}://www\\.youtube\\.com/watch\\?v=\\S*|https{0,1}://youtu\\.be/\\S*)")
+	serverIP         string
+	config           *Config
+
+	//configPath for unix systems
+	configPath = ".config/goparty/config.json"
 )
 
 type userIP string
@@ -58,7 +60,7 @@ func (db songdbUI) IncreaseID(id int) int {
 
 func (db songdbUI) IsDirectory(path string) bool {
 	if len(path) > 0 {
-		if path[len(path)-1] == '/' || path[len(path)-1] == '\\' {
+		if path[len(path)-1] == os.PathSeparator {
 			return true
 		}
 	}
@@ -83,7 +85,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		ip = ip.normalizeIP()
 	}
 
-	uidata.Name = user.GetUserNameToIP(ip.String())
+	uidata.Name = clients.GetUserNameToIP(ip.String())
 	uidata.Songs = mp3.GetCurrentPlaylist()
 	uidata.IP = ip.String()
 	uidata.AdminIP = serverIP
@@ -94,7 +96,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		if strings.Contains(ip.String(), "127.0.0.1") {
+		if strings.Contains(ip.String(), "127.0.0.1") || config.AllUserAdmin {
 			renderTemplate(w, "admin", uidata)
 		} else {
 			renderTemplate(w, "user", uidata)
@@ -200,9 +202,26 @@ func songDBHandler(w http.ResponseWriter, r *http.Request) {
 
 //SetupServing sets up all we need to handle our "website"
 func SetupServing() {
-	mp3.InitializeSongDBFromMemory(songDirectory, downloadDirectory)
 
-	err := user.InitUserNames("usernames.txt")
+	homedir, err := os.UserHomeDir()
+
+	if err != nil {
+		log.Fatalln("SetupServing: ", err)
+	}
+
+	configPath = homedir + string(os.PathSeparator) + configPath
+
+	cfg, err := ReadConfig(configPath)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	config = cfg
+
+	mp3.InitializeSongDBFromMemory(config.MusicPath, config.DownloadPath)
+
+	err = clients.InitUserNames("usernames.txt")
 	if err != nil {
 		log.Println(err)
 	}
@@ -214,12 +233,14 @@ func SetupServing() {
 
 	setupMusic()
 
+	mp3.SetNeededUpvoteCount(config.UpvotesNeededForRanking)
+
 	serverMux := http.NewServeMux()
 	serverMux.HandleFunc("/", viewHandler)
 	serverMux.HandleFunc("/upvote", upvoteHandler)
 	serverMux.HandleFunc("/songdb", songDBHandler)
 
-	youtube.StartDownloadWorker(downloadDirectory, mp3.AddMP3ToMusicQueue)
+	youtube.StartDownloadWorker(config.DownloadPath, mp3.AddMP3ToMusicQueue)
 
 	fmt.Println(createWelcomeMessage(serverIP))
 	go handleUserInput()
@@ -299,7 +320,10 @@ func createWelcomeMessage(ip string) string {
 	builder.WriteString("-------------------------------------\n\n")
 	builder.WriteString("Hello you are the admin!\n")
 	builder.WriteString("Your local IP is: ")
-	builder.WriteString(ip)
+	builder.WriteString(ip + "\n")
+	builder.WriteString("The config can be found under: ")
+	builder.WriteString(configPath + "\n")
+	builder.WriteString("After editing the config file you need to restart the program!")
 	builder.WriteString("\n\n")
 	builder.WriteString("You can enter the following commands:\n")
 	builder.WriteString("- help (shows this text)\n")
@@ -308,7 +332,6 @@ func createWelcomeMessage(ip string) string {
 	builder.WriteString("- skip (skips the current playing song)\n")
 	builder.WriteString("- list (lists all current songs in the playing queue)\n")
 	builder.WriteString("- exit/quit (quits the program)\n")
-
 	return builder.String()
 }
 
