@@ -58,7 +58,7 @@ func (db songdbUI) IncreaseID(id int) int {
 
 func (db songdbUI) IsDirectory(path string) bool {
 	if len(path) > 0 {
-		if path[len(path)-1] == '/' {
+		if path[len(path)-1] == '/' || path[len(path)-1] == '\\' {
 			return true
 		}
 	}
