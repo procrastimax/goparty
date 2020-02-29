@@ -25,7 +25,7 @@ var (
 	config           *Config
 
 	//configPath for unix systems
-	configPath = ".config/goparty/config.json"
+	configPath = ".config" + string(os.PathSeparator) + "goparty" + string(os.PathSeparator) + "config.json"
 )
 
 type userIP string
