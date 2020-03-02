@@ -50,13 +50,13 @@ For example:
 `"downloadPath"="C:\\user\\music\\goparty\\"`
 `"musicPath"="C:\\user\\music\\""`
 
-## Screenshot
+## Screenshots
 
-![User Page](screenshots/admin_page.png "User Page")
+![Admin Page](screenshots/admin_page.png "Admin Page")
 
 -------------------------------------------------------
 
-![Admin Page](screenshots/user_view.png "Admin Page")
+![User Page](screenshots/user_view.png "User Page")
 
 -------------------------------------------------------
 
