@@ -1,25 +1,49 @@
-# goparty - the youtube music queue software
+# goparty - the YouTube music queue software
 
-## What is this
+## What is this?
 
 This is a program for handling music at parties or just with some friends.
-It allows downloading songs from youtube and playing them in an evenly distributed song queue.
+It allows downloading songs from YouTube and playing them in an evenly distributed song queue.
 All downloaded songs get saved as mp3 files. When trying to download the same song again, the program recognizes this and just queues the already downloaded song.
 Also it is possible to see all mp3 files in a directory, so f.e. you can provide some of your favorite albums in a directory the program respects and then loads also these offline songs in.
-All this works by creating a webserver on the admin machine and all smartphones/ laptop capable of using a webbrowser can access the song queue.
+All this works by creating a webserver on the admin machine and all smartphones/ laptops capable of using a webbrowser can access the song queue.
 It is also possible for users to vote their favorite songs up, then they get reranked in the song queue.
 
-## Why not use a normal playlist
+## Why not use a normal playlist?
 
-The big advantage of this program is the ever expanding list of songs and the garanty for every user to hear his/her favorite song. Because the order of the queue can only be changed by the admin and by upvoting songs. On this way every user has the change to listen to his favorite song.
+The big advantage of this program is the ever expanding list of songs and the guaranty for every user to hear his/her favorite song. Because the order of the queue can only be changed by the admin and by upvoting songs. On this way every user has the chance to listen to his/her favorite song.
 Also by downloading all songs only once (and not streaming them) the program could soon be used completely offline.
 
-## What do I need for running this
+## How does the song queue works?
+
+Every user has a personal counter. When submitting a song, the song receives the current counter value of the person who queued the song. So when only one person submits a song the queue could look like this:
+- Song 1 - Counter Value: 1 Person 1
+- Song 2 - Counter Value: 2 Person 1
+- Song 3 - Counter Value: 3 Person 1
+- Song 4 - Counter Value: 4 Person 1
+
+When now a second person adds his/her first song, it gets queued behind the the last song in the queue which has the counter value of 1. So the queue would look like:
+- Song 1 - Counter Value: 1 Person 1
+- Song 5 - Counter Value: 1 Person 2
+- Song 2 - Counter Value: 2 Person 1
+- Song 3 - Counter Value: 3 Person 1
+- Song 4 - Counter Value: 4 Person 1
+
+If a song by a person got played, then the counter value of all songs the person added get decreased by 1.
+So the queue would look like:
+- Song 5 - Counter Value: 1 Person 2
+- Song 2 - Counter Value: 1 Person 1
+- Song 3 - Counter Value: 2 Person 1
+- Song 4 - Counter Value: 3 Person 1
+
+When a song is upvoted and the number of upvotes exceeds the minimum required number of upvotes then the counter value of this song decreases by one and ranks higher then before.
+
+## What do I need for running this?
 
 You need a running [go setup](<https://golang.org/doc/install>).
 Then go into this directory and execute `go build` or `go install`.
 
-Also you need youtube-dl for downloading songs from youtube and ffmpeg to convert the downloaded song to mp3 files.
+Also you need youtube-dl for downloading songs from YouTube and ffmpeg to convert the downloaded song to mp3 files.
 
 - [youtube-dl](<https://ytdl-org.github.io/youtube-dl>)
 - [ffmpeg](<https://ffmpeg.org/>)
