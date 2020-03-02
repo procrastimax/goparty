@@ -2,11 +2,11 @@ package mp3
 
 import (
 	"fmt"
-	"goparty/clients"
 	"strings"
 	"sync"
 
 	"github.com/faiface/beep"
+	"github.com/procrastimax/goparty/clients"
 )
 
 var (

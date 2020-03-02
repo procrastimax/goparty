@@ -17,8 +17,6 @@ package youtube
 import (
 	"bytes"
 	"fmt"
-	"goparty/clients"
-	"goparty/mp3"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,6 +24,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/procrastimax/goparty/clients"
+	"github.com/procrastimax/goparty/mp3"
 )
 
 var (

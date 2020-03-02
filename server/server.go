@@ -4,9 +4,6 @@ package server
 import (
 	"bufio"
 	"fmt"
-	"goparty/clients"
-	"goparty/mp3"
-	"goparty/youtube"
 	"html/template"
 	"log"
 	"net"
@@ -15,6 +12,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/procrastimax/goparty/clients"
+	"github.com/procrastimax/goparty/mp3"
+	"github.com/procrastimax/goparty/youtube"
 )
 
 var (

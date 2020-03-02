@@ -2,9 +2,10 @@ package tests
 
 import (
 	"fmt"
-	"goparty/mp3"
 	"strings"
 	"testing"
+
+	"github.com/procrastimax/goparty/mp3"
 )
 
 func TestInitializeSongDBFromMemory(t *testing.T) {

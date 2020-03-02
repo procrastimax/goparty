@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goparty/server"
+	"github.com/procrastimax/goparty/server"
 )
 
 const (
