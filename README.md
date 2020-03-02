@@ -22,7 +22,7 @@ Every user has a personal counter. When submitting a song, the song receives the
 - Song 3 - Counter Value: 3 Person 1
 - Song 4 - Counter Value: 4 Person 1
 
-When now a second person adds his/her first song, it gets queued behind the the last song in the queue which has the counter value of 1. So the queue would look like:
+When now a second person adds his/her first song, it gets queued behind the last song in the queue which has the counter value of the second person (1 in this example). So the queue would look like:
 - Song 1 - Counter Value: 1 Person 1
 - Song 5 - Counter Value: 1 Person 2
 - Song 2 - Counter Value: 2 Person 1
