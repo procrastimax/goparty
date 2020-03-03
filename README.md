@@ -36,7 +36,7 @@ So the queue would look like:
 - Song 3 - Counter Value: 2 Person 1
 - Song 4 - Counter Value: 3 Person 1
 
-When a song is upvoted and the number of upvotes exceeds the minimum required number of upvotes then the counter value of this song decreases by one and ranks higher then before.
+When a song is upvoted and the number of upvotes exceeds the minimum required number of upvotes. Then the counter value of this song decreases by one and ranks higher then before.
 
 ## What do I need for running this?
 
